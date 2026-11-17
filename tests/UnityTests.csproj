@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+  <PropertyGroup><GameRoot Condition="'$(GameRoot)'==''">E:\SteamLibrary\steamapps\common\Overcooked! 2</GameRoot><Managed>$(GameRoot)\Overcooked2_Data\Managed</Managed><Core>$(GameRoot)\BepInEx\core</Core><TargetFrameworkVersion>v3.5</TargetFrameworkVersion><OutputType>Library</OutputType><AssemblyName>OC2ModSettings.UnityTests</AssemblyName><OutputPath>..\bin\UnityTests\</OutputPath><LangVersion>3</LangVersion><PreBuildEvent /><PostBuildEvent /></PropertyGroup>
+  <PropertyGroup><ModSettingsAssembly Condition="'$(ModSettingsAssembly)'==''">..\bin\Release\OC2ModSettings.dll</ModSettingsAssembly></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" /><Reference Include="System.Core" />
+    <Reference Include="ModSettingsSelected"><HintPath>$(ModSettingsAssembly)</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(Core)\BepInEx.dll</HintPath><Private>false</Private></Reference><Reference Include="0Harmony"><HintPath>$(Core)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference><Reference Include="Assembly-CSharp-firstpass"><HintPath>$(Managed)\Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.UI"><HintPath>$(Managed)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Managed)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference><Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Managed)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup><Compile Include="UnityTests.cs" /><Compile Include="UnityFixtures.cs" /><Compile Include="UnityInteractions.cs" /><Compile Include="UnityTypeEditors.cs" /><Compile Include="UnityLifecycle.cs" /><Compile Include="UnityLayout.cs" /><Compile Include="UnityScrollbars.cs" /></ItemGroup>
+  <ItemGroup><Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Managed)\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
+  <ItemGroup><Compile Include="UnityPins.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityShortcut.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityOverlay.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityImmediateEditing.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityKeyEditors.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityOpeningPerformance.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityResponsiveRows.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityColorPicker.cs" /><Compile Include="UnityActions.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityFeedback.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityGlobalOverlay.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityFonts.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityClipping.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityTextSelection.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityCategoryOrder.cs" /></ItemGroup>
+  <ItemGroup><Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

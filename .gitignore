@@ -1,0 +1,11 @@
+.*
+!.gitignore
+!.github/
+bin/
+obj/
+*.user
+*.dll
+*.pdb
+*.zip
+AGENTS.md
+GOAL.md

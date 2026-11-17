@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <GameRoot Condition="'$(GameRoot)' == ''">E:\SteamLibrary\steamapps\common\Overcooked! 2</GameRoot>
+    <Managed>$(GameRoot)\Overcooked2_Data\Managed</Managed><Core>$(GameRoot)\BepInEx\core</Core>
+    <OutputType>Library</OutputType><AssemblyName>OC2ModSettings</AssemblyName><RootNamespace>OC2ModSettings</RootNamespace>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion><LangVersion>3</LangVersion>
+    <OutputPath>bin\$(Configuration)\</OutputPath><PlatformTarget>AnyCPU</PlatformTarget><Optimize>true</Optimize>
+    <WarningLevel>4</WarningLevel><TreatWarningsAsErrors>true</TreatWarningsAsErrors><Deterministic>true</Deterministic>
+    <PreBuildEvent /><PostBuildEvent />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" /><Reference Include="System.Core" />
+    <Reference Include="BepInEx"><HintPath>$(Core)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(Core)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(Managed)\Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(Managed)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Managed)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputModule"><HintPath>$(Managed)\UnityEngine.InputModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(Managed)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Managed)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup><Compile Include="src\**\*.cs" /><Compile Include="Properties\AssemblyInfo.cs" /></ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="assets\icons\pin-outline.png"><LogicalName>OC2ModSettings.Assets.PinOutline.png</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="assets\icons\pin-filled.png"><LogicalName>OC2ModSettings.Assets.PinFilled.png</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="assets\icons\toggle-on.png"><LogicalName>OC2ModSettings.Assets.ToggleOn.png</LogicalName></EmbeddedResource>
+    <EmbeddedResource Include="assets\icons\toggle-off.png"><LogicalName>OC2ModSettings.Assets.ToggleOff.png</LogicalName></EmbeddedResource>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
