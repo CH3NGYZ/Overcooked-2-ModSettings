@@ -1,9 +1,10 @@
 param([string]$GameRoot='E:\SteamLibrary\steamapps\common\Overcooked! 2',[switch]$WithoutFastInit,
-    [string[]]$EmbeddedAssemblies=@(),[string]$SelectedAssembly='', [string]$ExpectedVersion='1.0.0',
-    [int]$FixtureCount=30,[switch]$NoStandalone,[switch]$WithGameplay,[switch]$ShortcutOnly,[switch]$OpeningPerformance,[switch]$TextEditingOnly)
+    [string[]]$EmbeddedAssemblies=@(),[string]$SelectedAssembly='', [string]$ExpectedVersion='',
+    [int]$FixtureCount=30,[switch]$NoStandalone,[switch]$WithGameplay,[switch]$ShortcutOnly,[switch]$OpeningPerformance,[switch]$TextEditingOnly,[switch]$LocalizationOnly)
 $ErrorActionPreference='Stop'
 if(Get-Process -Name Overcooked2 -ErrorAction SilentlyContinue){throw 'A player game is running; no test deployment performed.'}
 & (Join-Path $PSScriptRoot 'build.ps1') -GameRoot $GameRoot
+if(-not $ExpectedVersion){$ExpectedVersion=[Reflection.AssemblyName]::GetAssemblyName((Join-Path $PSScriptRoot '..\bin\Release\OC2ModSettings.dll')).Version.ToString(3)}
 $testProperties=@();if($SelectedAssembly){$testProperties+="/p:ModSettingsAssembly=$SelectedAssembly"}
 & 'D:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' (Join-Path $PSScriptRoot '..\tests\UnityTests.csproj') /t:Rebuild "/p:GameRoot=$GameRoot" /p:PreBuildEvent= /p:PostBuildEvent= /v:minimal /nologo @testProperties
 if($LASTEXITCODE -ne 0){throw 'Unity test build failed'}
@@ -35,6 +36,7 @@ try{
     if($ShortcutOnly){$arguments+='-modSettingsShortcutOnly'}
     if($OpeningPerformance){$arguments+='-modSettingsOpeningPerformance'}
     if($TextEditingOnly){$arguments+='-modSettingsTextEditingOnly'}
+    if($LocalizationOnly){$arguments+='-modSettingsLocalizationOnly'}
     Start-Process -FilePath $steam -ArgumentList $arguments -WindowStyle Hidden | Out-Null
     Write-Output "Unity run: $run"
     $deadline=(Get-Date).AddSeconds(220); $seen=$false

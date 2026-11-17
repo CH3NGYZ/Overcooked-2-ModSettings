@@ -5,7 +5,7 @@ using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 
-namespace ModSettingsExample
+namespace OC2ModSettings.SDK
 {
     // Compile into the consumer. This file deliberately has no reference to OC2ModSettings.dll.
     public sealed class ModSettingsClient

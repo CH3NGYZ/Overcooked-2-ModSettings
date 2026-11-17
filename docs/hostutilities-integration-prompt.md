@@ -9,7 +9,7 @@
 
 先只读以下已实现契约及示例：
 - E:\code\OC2\OtherMOD\Overcooked-2-ModSettings\docs\api-v1.md
-- E:\code\OC2\OtherMOD\Overcooked-2-ModSettings\examples\ModSettingsClient.cs
+- E:\code\OC2\OtherMOD\Overcooked-2-ModSettings\sdk\ModSettingsClient.cs
 - E:\code\OC2\OtherMOD\Overcooked-2-ModSettings\docs\hostutilities-actions.md
 
 目标：
@@ -27,7 +27,7 @@
 公共服务协议：
 GUID = com.ch3ngyz.plugin.overcooked2.modsettings
 通过BepInDependency SoftDependency（使用当地常量/约定）和 Chainloader.PluginInfos[GUID].Instance 访问当选服务，不引用OC2ModSettings.dll，不反射私有成员。即使宿主内置了公共源码，也不得直接调用同程序集static Instance，BepInEx可能选中独立或另一宿主副本。
-公开API版本仍为1，当前源码版本1.0.0。老版本1.0.0可能没有动作方法，必须探测实际公开方法并缓存MethodInfo（含缺失结果），不能只比版本字符串。
+公开API版本仍为1，当前源码版本1.1.0。源码SDK和独立ModSettingsAttributes见sdk目录，可直接源码引用；保留Configuration Manager兼容时可继续用旧tag，或同时带两种tag（新tag优先）。老版本1.0.0可能没有动作方法，必须探测实际公开方法并缓存MethodInfo（含缺失结果），不能只比版本字符串。
 GetApiVersionV1(): int
 GetStatusV1(): string，ready/unavailable；ready不代表原生菜单当前可交互。
 RegisterConfigV1(string ownerGuid,string displayName,string description,ConfigFile config): IDisposable
@@ -36,6 +36,8 @@ RegisterActionV1(string ownerGuid,string actionId,IDictionary<string,object> des
 Entry缺省为独立按钮；Entry=现有playerName就是输入框旁按钮。Category决定独立行分类，CategoryOrder决定分区降序，Order决定分区内部行或同一配置项附加动作的降序；附加按钮始终跟随原配置行。ClosePage=true先经公共NativePage.Hide释放菜单/弹层/编辑/玩家输入，再同步在Unity主线程调用Execute。更新会显示原生业务弹窗，网页会打开Steam overlay，两个动作都使用ClosePage=true。
 
 分区排序补充（公共Mod Settings已实现读取）：从HostUtilities现有Section声明顺序统一生成稳定CategoryOrder，高值在前，恢复“Language → MOD设置 → 改名及消息传递 → 常用功能设置……”；不要按翻译后的名称重算。经ConfigureEntryV1原有覆盖字典传入，或在已有ConfigurationManagerAttributes加public int? CategoryOrder供公共服务读取；不另建重复排序表。同一分区的普通配置与独立动作传同一值，检查更新的Order紧接开启刷分模式，CategoryOrder不用于调整区内行。语言切换只换DispName/DisplayName、Category、Description并重新注册租约，CategoryOrder/Order及稳定actionId保持；保留历史cfg section/key，不给标题加回数字。行旁改名按钮沿用playerName所在分区，不自行分区。Configuration Manager现有分区/CustomDrawer逻辑继续保持，这个扩展字段不代表它也自动支持CategoryOrder；需要其排序时复用HostUtilities原有兼容路径。公共实现仍是API v1，旧副本会忽略字段，需安装/内置一致的新源码。
+
+下拉多语言补充（公共侧已补支持）：ObjToStr同时用于当前值和全部候选显示名；已打开内置下拉会在Refresh后按同一ConfigEntry重建并恢复原始焦点值，候选重排不按旧索引提交。请核查SessionForceHost.Awake的strList、SessionLobbyJoiner.Awake的distanceStrList以及其他AcceptableValueList，它们有在启动时一次性调用Language.GetConfigText保存翻译文字的路径，仅RefreshLocalizedMetadata改标题不会更新这些候选。优先在既有显示元数据中给相同实际值提供ObjToStr，由它按HostUtilities当前ConfigLanguage返回显示文字；不要强制跟随游戏语言，不复制公共UI/缓存。保留历史cfg Section/Key、已有值及业务比较语义，不能把旧文字列表直接换成新ID导致旧值失效；若需迁移必须沿用宿主权威转换和兼容路径。新配置可以用稳定ID/枚举。所有显示tag和动作更新完成后通过现有桥接统一RefreshV1/SDK Refresh一次；不要磁盘Reload或重复Bind。Configuration Manager仍走其原有formatter/drawer能力，两套UI复用同一语义翻译函数。验证“只改MOD语言、游戏语言不变”时当前值、候选、标题、说明及业务动作均更新，且选择结果仍为原值。
 CanExecute约0.2秒及点击前在主线程调用，必须轻量；仅在适合暴露既有权威状态时使用，业务入口的重入保护始终是权威，不要在接入层复制更新内部布尔状态。
 相同ownerGuid/actionId后注册替换旧动作，旧IDisposable释放不能删新动作。插件销毁释放自己的全部租约；语言变化按现有语言刷新入口更新DisplayName/Description/Category，稳定actionId不变，无每帧注册、重复按钮或重复事件订阅。
 Mod Settings缺失、状态unavailable、旧版缺RegisterActionV1或可选注册失败时，只跳过该可选接入，不能影响Configuration Manager、更新、改名或HostUtilities启动。错误记录一次或限频，日志不带敏感URL。

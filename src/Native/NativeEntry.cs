@@ -14,6 +14,7 @@ namespace OC2ModSettings
         private bool nextLinked;
         private float extension, nextAttempt;
         private GameObject placeholder;
+        private SupportedLanguages language;
         internal NativeEntry(ModSettingsPlugin owner) { plugin = owner; }
         internal void Refresh(FrontendMenuBehaviour menu, GamepadUser user)
         {
@@ -27,6 +28,8 @@ namespace OC2ModSettings
         {
             if (Time.realtimeSinceStartup < nextAttempt) return;
             nextAttempt = Time.realtimeSinceStartup + .5f;
+            if (button != null && language != Localization.GetLanguage())
+            { language = Localization.GetLanguage(); NativeUi.Label(button.transform, Texts.Title); }
             try { if (button == null && NativeHooks.Ready(root)) Ensure(); }
             catch (Exception e) { plugin.Report("NativeEntry.Tick", e); }
         }
@@ -40,6 +43,7 @@ namespace OC2ModSettings
             anchor = source.GetComponent<T17Button>();
             panel = source.parent as RectTransform;
             button = NativeUi.CloneButton(anchor, panel, "ModSettingsEntry", Texts.Title, delegate { Open(); });
+            language = Localization.GetLanguage();
             button.gameObject.AddComponent<MenuEntryFocus>().Initialize(button);
             button.transform.SetSiblingIndex(source.GetSiblingIndex() + 1);
             button.SetEventSystem(root.CachedEventSystem);

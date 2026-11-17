@@ -26,6 +26,7 @@
   <ItemGroup><Compile Include="UnityClipping.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityTextSelection.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityCategoryOrder.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityLocalization.cs" /></ItemGroup>
   <ItemGroup><Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

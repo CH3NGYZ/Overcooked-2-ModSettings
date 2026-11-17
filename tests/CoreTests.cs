@@ -85,6 +85,8 @@ internal static partial class CoreTests
                 Check(mods[0] == normal && mods[1] == pinned, "absent HostUtilities creates no placeholder and pinned names remain sorted");
             }
             VerifyCategoryOrder(root);
+            VerifySdk(root);
+            VerifyLocalization(root);
             Console.WriteLine("PASS: " + assertions + " core assertions"); return 0;
         }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }

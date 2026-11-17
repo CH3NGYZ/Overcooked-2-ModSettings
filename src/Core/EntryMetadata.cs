@@ -25,16 +25,20 @@ namespace OC2ModSettings
         {
             EntryMetadata m = new EntryMetadata { Name = entry.Definition.Key,
                 Category = entry.Definition.Section, Description = entry.Description.Description };
-            foreach (object tag in entry.Description.Tags)
-            {
-                if (tag == null) continue;
-                // ConfigurationManagerAttributes is deliberately copied across assemblies.
-                if (tag.GetType().Name != "ConfigurationManagerAttributes") continue;
-                foreach (FieldInfo field in tag.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
-                    m.Apply(field.Name, field.GetValue(tag));
-            }
+            // Source SDK types may live in any consumer assembly. Never require their CLR identity.
+            ApplyTags(m, entry.Description.Tags, "ConfigurationManagerAttributes");
+            ApplyTags(m, entry.Description.Tags, "ModSettingsAttributes");
             if (overrides != null) foreach (KeyValuePair<string, object> pair in overrides) m.Apply(pair.Key, pair.Value);
             return m;
+        }
+        private static void ApplyTags(EntryMetadata metadata, object[] tags, string name)
+        {
+            foreach (object tag in tags)
+            {
+                if (tag == null || tag.GetType().Name != name) continue;
+                foreach (FieldInfo field in tag.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
+                    metadata.Apply(field.Name, field.GetValue(tag));
+            }
         }
         private void Apply(string key, object value)
         {

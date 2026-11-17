@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using BepInEx.Configuration;
 using UnityEngine;
 using UnityEngine.UI;
@@ -137,6 +136,16 @@ namespace OC2ModSettings
             catch (Exception e) { page.ShowError(Row.Metadata.Name + ": " + e.Message); }
             finally { refreshing = false; }
         }
+        internal void RefreshLanguage()
+        {
+            foreach (Selectable control in Controls)
+            {
+                if (control.name == "Default") NativeUi.Label(control.transform, Texts.Defaults);
+                else if (control.name == "Capture") NativeUi.Label(control.transform, Texts.Rebind);
+                else if (control.name == "PickColor") NativeUi.Label(control.transform, Texts.PickColor);
+            }
+            Refresh();
+        }
         internal bool Owns(GameObject go) { return go != null && (go.transform == Root || go.transform.IsChildOf(Root)); }
         internal bool CancelPending()
         {
@@ -166,25 +175,17 @@ namespace OC2ModSettings
         }
         private object[] Choices()
         {
-            AcceptableValueBase acceptable = Row.Entry.Description.AcceptableValues;
-            PropertyInfo p = acceptable == null ? null : acceptable.GetType().GetProperty("AcceptableValues");
-            Array values = p == null ? null : p.GetValue(acceptable, null) as Array;
-            if (values == null) return null;
-            object[] result = new object[values.Length]; values.CopyTo(result, 0); return result;
+            return ChoiceItems.ValuesFor(Row.Entry);
         }
-        private void OpenChoices()
+        internal void OpenChoices()
         {
             Type type = Row.Entry.SettingType;
-            object[] choices = Choices();
-            if (choices == null) { Array values = Enum.GetValues(type); choices = new object[values.Length]; values.CopyTo(choices, 0); }
-            string[] names = new string[choices.Length];
+            Transform invoker = Root.Find(type == typeof(KeyCode) ? "KeyList" : "Dropdown");
+            if (Row.Metadata.ReadOnly || invoker == null || Choices() == null) return;
             bool flags = type.IsEnum && type.IsDefined(typeof(FlagsAttribute), false);
-            for (int i = 0; i < choices.Length; i++)
-                names[i] = (flags && EnumBits.Contains(Row.Entry.BoxedValue, choices[i]) ? "✓ " : "") + ValueCodec.Format(Row, choices[i]);
-            object[] captured = choices;
-            page.Overlay.Choose(Row.Metadata.Name, names, delegate(int index)
+            page.Overlay.Choose(Row, invoker.gameObject, delegate(object value)
             {
-                Commit(flags ? EnumBits.Toggle(type, Row.Entry.BoxedValue, captured[index]) : captured[index]);
+                Commit(flags ? EnumBits.Toggle(type, Row.Entry.BoxedValue, value) : value);
                 if (flags) OpenChoices();
             });
         }

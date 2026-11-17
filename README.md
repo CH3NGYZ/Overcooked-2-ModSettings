@@ -1,4 +1,4 @@
-# 原生 MOD 设置 1.0.0
+# 原生 MOD 设置 1.1.1
 
 《胡闹厨房 2》Windows Steam / Unity Mono 的公共设置页面。入口位于主菜单 **厨师 → MOD 设置**，在“选择厨师”下方。GUID 为 `com.ch3ngyz.plugin.overcooked2.modsettings`。
 
@@ -32,20 +32,26 @@ KeyCode 左侧按钮展开单键候选二级菜单，去除枚举别名重复项
 
 无需接入即可自动发现 `Chainloader.PluginInfos` 中已加载插件的 Config。显示信息或自定义编辑器参见 [API v1](docs/api-v1.md) 和 [接入示例](examples/ConsumerPlugin.cs)。示例使用软依赖、缓存反射及共享类型，无需引用公共插件 DLL。
 
+[源码 SDK](sdk/README.md) 随仓库提供：`sdk/ModSettingsAttributes.cs` 声明名称、说明、分区及排序等显示元数据，`sdk/ModSettingsClient.cs` 提供刷新、业务按钮和原生编辑器接入；可直接复制、源码链接或导入 `sdk/ModSettings.SDK.projitems`，不依赖 Configuration Manager。MOD 自己切换语言后，更新 tag 再统一 Refresh；新旧声明兼容及覆盖规则见 SDK 文档。新 tag 需要 1.1.0 或更新的实际当选服务。
+
+公共页面的按钮、提示、搜索、改键及色板跟随游戏的12种官方语言，开关使用游戏原生译文。消费方可以继续独立选择自己的语言，通过`ObjToStr`让当前值和下拉候选一起翻译；已打开的内置下拉也支持刷新，保存值保持原始身份。仅有启动时生成的翻译字符串时，需消费方提供对应formatter，接入与历史值兼容边界见SDK说明。
+
 业务按钮通过可选`RegisterActionV1`注册：没有`Entry`为独立行，提供原配置项时追加行旁按钮，继续复用内置输入和保存。支持轻量`CanExecute`、替换/释放租约、异常隔离及`ClosePage`先关闭公共页再执行业务；动作不参与恢复默认和配置保存。消费者需探测实际方法，旧版缺方法时跳过接入，不能只凭版本字符串判断。HostUtilities真实调用链见[按钮接入调查](docs/hostutilities-actions.md)，可将[双界面接入提示词](docs/hostutilities-integration-prompt.md)交给其Agent实施，同时保留Configuration Manager原有入口；本仓库未修改HostUtilities。
 
-单 DLL 内置：将本项目 `src/**/*.cs` 作为源码编译进宿主，并按 [内置清单](docs/api-v1.md#源码与资源内置) 嵌入四个 PNG（两种图钉、两种开关）。保持全部公共源码、资源、命名空间、GUID 和版本不变，使用相同游戏引用，不复制本项目 `Properties/AssemblyInfo.cs`。BepInEx 选出最高版本的公共插件；宿主自身继续使用自己的 GUID。不要使用 `PatchAll(宿主程序集)` 安装公共服务补丁。公共服务只安装自己的明确补丁。
+单 DLL 内置：将本项目 `src/**/*.cs` 及 `sdk/*.cs` 作为源码编译进宿主，并按 [内置清单](docs/api-v1.md#源码与资源内置) 嵌入四个 PNG（两种图钉、两种开关）。保持全部公共源码、资源、命名空间、GUID 和版本不变，使用相同游戏引用，不复制本项目 `Properties/AssemblyInfo.cs`。BepInEx 选出最高版本的公共插件；宿主自身继续使用自己的 GUID。不要使用 `PatchAll(宿主程序集)` 安装公共服务补丁。公共服务只安装自己的明确补丁。
 
 同版本必须是同一实现；内置后不要让宿主直接访问其程序集内的公共服务 static Instance，应始终反射调用 `Chainloader.PluginInfos[GUID].Instance`。升级要重启；最高候选加载失败时，加载器不会自动回退到已跳过旧版，需移除失败候选后重启。不要把两个插件条目合并成一个 BepInPlugin。
 
 ## 本地验证
 
-- `scripts/test.ps1`：真实 BepInEx ConfigFile 的桌面边界测试。
-- `scripts/test-examples.ps1`：消费方和自定义控件独立编译。
+- `scripts/test.ps1`：真实 BepInEx ConfigFile、已构建提供端及独立 SDK 程序集的桌面边界测试。
+- `scripts/test-examples.ps1`：SDK、消费方和自定义控件按.NET3.5独立编译，无服务DLL引用。
 - `scripts/test-unity.ps1` / `-WithoutFastInit`：自然登录、隔离存档、真实原生 UI 与脚本输入，保存截图/几何并恢复临时安装。
 - `scripts/test-unity.ps1 -WithoutFastInit -WithGameplay`：完整页面回归后，经本地街机大厅原生确认、倒计时加载进入真实厨房，验证全局快捷键路径；`-ShortcutOnly` 只跑快捷键、前端重建、大厅与厨房分支。
 - `scripts/test-unity.ps1 -OpeningPerformance`：真实入口首次/六次重复打开耗时、观测帧间隔、控件身份、隐藏期间值/结构变化、自定义编辑器和首次加载取消回归；原始数据写入 `opening-performance.txt`。
 - `scripts/test-unity.ps1 -WithoutFastInit -FixtureCount 30 -TextEditingOnly`：即时搜索、无回车写盘、非法草稿/底部提示、两种自动保存策略的写盘失败，以及鼠标选区和分区顺序专项。
+- `scripts/test-unity.ps1 -WithoutFastInit -FixtureCount 3 -LocalizationOnly`：覆盖真实语言API的专项，检查12语现有控件、独立MOD语言下拉刷新、候选重排、编辑草稿和弹层输入租约；测试不写玩家语言设置，实际字形仍需检查截图。
 - `scripts/test-shared.ps1`：临时编译同版/异版/混合内置副本，真实 BepInEx 启动选优。测试版本只存在于忽略目录。
+- `scripts/test-shared.ps1 -BuildOnly`：仅验证四份源码内置程序集编译，不安装或启动游戏。
 
-证据与覆盖限制见 [验证记录](docs/verification.md)、[即时输入和校验反馈](docs/immediate-input-verification.md) 和 [常驻画布、字体及遮罩验证](docs/global-overlay-verification.md)。物理设备、联机和其他平台需单独验证。实机脚本拒绝接管已有玩家游戏，只结束带本轮唯一标记的测试进程。完整场会故意抛出`fixture action failure`及`fixture predicate failure`，验证业务动作异常隔离；结果以同轮`result.txt`及恢复核对为准。
+证据与覆盖限制见 [语言与下拉刷新验证](docs/localization-verification.md)、[SDK验证](docs/sdk-verification.md)、[验证记录](docs/verification.md)、[即时输入和校验反馈](docs/immediate-input-verification.md) 和 [常驻画布、字体及遮罩验证](docs/global-overlay-verification.md)。物理设备、联机和其他平台需单独验证。实机脚本拒绝接管已有玩家游戏，只结束带本轮唯一标记的测试进程。完整场会故意抛出`fixture action failure`及`fixture predicate failure`，验证业务动作异常隔离；结果以同轮`result.txt`及恢复核对为准。

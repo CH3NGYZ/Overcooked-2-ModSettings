@@ -9,7 +9,7 @@ namespace OC2ModSettings
         private Color? colorDraft;
         private void BuildColor()
         {
-            hex = NativeTextInput.Create(page, Root, "Hex", "", "#RRGGBBAA");
+            hex = NativeTextInput.Create(page, Root, "Hex", "", Texts.HexHint);
             hex.Changed = delegate(string raw)
             {
                 Color value;
@@ -20,7 +20,7 @@ namespace OC2ModSettings
             Controls.Add(hex);
             colorPreview = NativeUi.Rect(Root, "ColorPreview", Vector2.zero, Vector2.one).gameObject.AddComponent<ColorRamp>();
             colorPreview.raycastTarget = false;
-            Button("PickColor", Texts.Pick("选色", "Pick color"), 0, 1, delegate
+            Button("PickColor", Texts.PickColor, 0, 1, delegate
             {
                 page.Overlay.PickColor(Row.Metadata.Name, delegate { return (Color)Row.Entry.BoxedValue; },
                     delegate(Color value) { colorDraft = value; RefreshColor(value); },

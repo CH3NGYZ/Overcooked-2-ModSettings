@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
 
@@ -11,23 +10,9 @@ namespace OC2ModSettings
         private KeyCapture keyCapture;
         private void BuildKeyCode()
         {
-            T17Button choices = Button("KeyList", "", 0, .65f, OpenKeyCodes);
+            T17Button choices = Button("KeyList", "", 0, .65f, OpenChoices);
             valueLabel = choices.GetComponentInChildren<T17Text>(true);
             rebind = Button("Rebind", Texts.Rebind, .66f, .80f, BeginKeyCapture);
-        }
-        private void OpenKeyCodes()
-        {
-            List<KeyCode> keys = new List<KeyCode>(); List<string> names = new List<string>();
-            HashSet<int> seen = new HashSet<int>();
-            AcceptableValueBase acceptable = Row.Entry.Description.AcceptableValues;
-            foreach (KeyCode key in Enum.GetValues(typeof(KeyCode)))
-            {
-                if (!seen.Add((int)key) || (acceptable != null && !acceptable.IsValid(key))) continue;
-                keys.Add(key); names.Add(ValueCodec.Format(Row, key));
-            }
-            page.Overlay.Choose(Row.Metadata.Name, names.ToArray(), delegate(int index) { Commit(keys[index]); });
-            int current = keys.IndexOf((KeyCode)Row.Entry.BoxedValue);
-            if (current >= 0) page.Overlay.FocusChoice(current);
         }
         private void BeginKeyCapture()
         {

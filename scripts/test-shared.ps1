@@ -1,16 +1,26 @@
-param([string]$GameRoot='E:\SteamLibrary\steamapps\common\Overcooked! 2')
+param([string]$GameRoot='E:\SteamLibrary\steamapps\common\Overcooked! 2',[switch]$BuildOnly)
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $output=Join-Path $root ('.validation\shared-'+(Get-Date -Format yyyyMMdd-HHmmss))
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $msbuild='D:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe'
+$pluginSource=[IO.File]::ReadAllText((Join-Path $root 'src\ModSettingsPlugin.cs'))
+$versionMatch=[regex]::Match($pluginSource,'public const string Version = "([0-9.]+)";')
+if(-not $versionMatch.Success){throw 'Cannot resolve production plugin version'}
+$currentVersion=[version]$versionMatch.Groups[1].Value
+$baseVersion=$currentVersion.ToString(3)
+$higherVersion=[version]::new($currentVersion.Major,$currentVersion.Minor,$currentVersion.Build+1).ToString(3)
+$newerVersion=[version]::new($currentVersion.Major,$currentVersion.Minor+1,0).ToString(3)
+# The higher fixture is above the intermediate fixture, which is above the standalone version.
+# Mixed mode therefore tests a strictly higher embedded winner without a filename-dependent tie.
 function Build-Embedded([string]$HostId,[string]$Version){
     $stage=Join-Path $output "$HostId-$Version";New-Item -ItemType Directory -Path $stage | Out-Null
     Copy-Item -LiteralPath (Join-Path $root 'src') -Destination $stage -Recurse
+    Copy-Item -LiteralPath (Join-Path $root 'sdk') -Destination $stage -Recurse
     Copy-Item -LiteralPath (Join-Path $root 'Properties') -Destination $stage -Recurse
     Copy-Item -LiteralPath (Join-Path $root 'assets') -Destination $stage -Recurse
     $plugin=Join-Path $stage 'src\ModSettingsPlugin.cs'
-    [IO.File]::WriteAllText($plugin,([IO.File]::ReadAllText($plugin).Replace('Version = "1.0.0"',"Version = `"$Version`"")),[Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($plugin,([IO.File]::ReadAllText($plugin).Replace($versionMatch.Value,"public const string Version = `"$Version`";")),[Text.UTF8Encoding]::new($false))
     $project=[IO.File]::ReadAllText((Join-Path $root 'OC2ModSettings.csproj')).Replace('<AssemblyName>OC2ModSettings</AssemblyName>',"<AssemblyName>ModSettingsHost$HostId</AssemblyName>")
     [IO.File]::WriteAllText((Join-Path $stage 'Host.csproj'),$project,[Text.UTF8Encoding]::new($false))
     $source=@"
@@ -26,13 +36,15 @@ public sealed class EmbeddedHost : BaseUnityPlugin {
     if($LASTEXITCODE -ne 0){throw 'Embedded source compilation failed'}
     return Join-Path $stage "bin\Release\ModSettingsHost$HostId.dll"
 }
-$a10=Build-Embedded 'a' '1.0.0';$b10=Build-Embedded 'b' '1.0.0';$b09=Build-Embedded 'b' '0.9.0';$a11=Build-Embedded 'a' '1.1.0'
+$aSame=Build-Embedded 'a' $higherVersion;$bSame=Build-Embedded 'b' $higherVersion
+$bOld=Build-Embedded 'b' $baseVersion;$aNew=Build-Embedded 'a' $newerVersion
 # Version changes exist only in ignored test staging, never in shipping source.
+if($BuildOnly){Write-Output "PASS: four embedded SDK/provider assemblies built without deployment: $output";return}
 $scenarios=@(
-    @{Name='embedded-same';EmbeddedAssemblies=@($a10,$b10);SelectedAssembly=$a10;ExpectedVersion='1.0.0';NoStandalone=$true;FixtureCount=10},
-    @{Name='embedded-different';EmbeddedAssemblies=@($a10,$b09);SelectedAssembly=$a10;ExpectedVersion='1.0.0';NoStandalone=$true;FixtureCount=1},
-    @{Name='mixed';EmbeddedAssemblies=@($a10,$b09);SelectedAssembly=$a10;ExpectedVersion='1.0.0';FixtureCount=30},
-    @{Name='embedded-newer';EmbeddedAssemblies=@($a11,$b09);SelectedAssembly=$a11;ExpectedVersion='1.1.0';FixtureCount=10}
+    @{Name='embedded-same';EmbeddedAssemblies=@($aSame,$bSame);SelectedAssembly=$aSame;ExpectedVersion=$higherVersion;NoStandalone=$true;FixtureCount=10},
+    @{Name='embedded-different';EmbeddedAssemblies=@($aSame,$bOld);SelectedAssembly=$aSame;ExpectedVersion=$higherVersion;NoStandalone=$true;FixtureCount=1},
+    @{Name='mixed';EmbeddedAssemblies=@($aSame,$bOld);SelectedAssembly=$aSame;ExpectedVersion=$higherVersion;FixtureCount=30},
+    @{Name='embedded-newer';EmbeddedAssemblies=@($aNew,$bOld);SelectedAssembly=$aNew;ExpectedVersion=$newerVersion;FixtureCount=10}
 )
 foreach($scenario in $scenarios){
     $name=$scenario.Name;$scenario.Remove('Name');Write-Output "Shared loading scenario: $name"

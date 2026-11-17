@@ -32,13 +32,13 @@ namespace OC2ModSettings
             Alpha = Slider(page, "Alpha", new Vector2(.04f, .07f), new Vector2(.63f, .11f), delegate(float a) { alpha = a; Preview(); });
             alphaRamp = NativeUi.Rect(Alpha.transform, "Gradient", Vector2.zero, Vector2.one).gameObject.AddComponent<ColorRamp>();
             alphaRamp.raycastTarget = false; Alpha.handleRect.SetAsLastSibling();
-            hueLabel = Label(page, "HueLabel", Texts.Pick("色相", "Hue"), .215f);
-            Label(page, "AlphaLabel", Texts.Pick("透明度 A", "Opacity A"), .115f);
-            Label(page, "HexLabel", "Hex · #RRGGBBAA", .69f, .68f, .96f);
-            Label(page, "ControlsHint", Texts.Pick("拖动选色，松手保存\n方向键：确认后调色，再确认保存", "Drag to preview; release to save\nPad: confirm, adjust, confirm to save"), .35f, .68f, .96f, .12f);
+            hueLabel = Label(page, "HueLabel", Texts.Hue, .215f);
+            Label(page, "AlphaLabel", Texts.Opacity, .115f);
+            Label(page, "HexLabel", "Hex · " + Texts.HexHint, .69f, .68f, .96f);
+            Label(page, "ControlsHint", Texts.ColorHint, .35f, .68f, .96f, .18f);
             swatch = NativeUi.Rect(transform, "ColorPreview", new Vector2(.70f, .78f), new Vector2(.94f, .85f)).gameObject.AddComponent<ColorRamp>();
             swatch.raycastTarget = false;
-            Hex = NativeTextInput.Create(page, transform, "Hex", "", "#RRGGBBAA");
+            Hex = NativeTextInput.Create(page, transform, "Hex", "", Texts.HexHint);
             Stretch(Hex.GetComponent<RectTransform>(), new Vector2(.68f, .58f), new Vector2(.96f, .67f));
             Hex.ValidationLabel = Label(page, "HexValidation", "", .53f, .68f, .96f, .045f);
             Hex.Changed = delegate(string raw)
@@ -72,7 +72,8 @@ namespace OC2ModSettings
         private T17Text Label(NativePage page, string name, string text, float bottom, float left, float right, float height)
         {
             T17Text label = NativeUi.Text(page.TextTemplate, NativeUi.Rect(transform, name, new Vector2(left, bottom), new Vector2(right, bottom + height)), "Text", text, 20);
-            label.color = new Color(.1f, .2f, .27f); return label;
+            label.color = new Color(.1f, .2f, .27f);
+            label.resizeTextForBestFit = true; label.resizeTextMinSize = 12; label.resizeTextMaxSize = 20; return label;
         }
         internal static bool TryHex(string raw, out Color color)
         {
@@ -103,8 +104,15 @@ namespace OC2ModSettings
             Hue.value = hue; Hue.Pending = huePending; Alpha.value = alpha; Alpha.Pending = alphaPending;
             Hex.SetValue("#" + ColorUtility.ToHtmlStringRGBA(value)); exactAlpha.SetValue(alpha.ToString("0.###", CultureInfo.InvariantCulture));
             swatch.SetColors(value, value); Color low = value, high = value; low.a = 0; high.a = 1; alphaRamp.SetColors(low, high);
-            NativeUi.Label(hueLabel.transform, Texts.Pick("色相", "Hue") + "  " + (hue * 360).ToString("0", CultureInfo.InvariantCulture) + "°");
+            NativeUi.Label(hueLabel.transform, Texts.Hue + "  " + (hue * 360).ToString("0", CultureInfo.InvariantCulture) + "°");
             updating = false;
+        }
+        internal void RefreshLanguage()
+        {
+            NativeUi.Label(transform.Find("AlphaLabel"), Texts.Opacity);
+            NativeUi.Label(transform.Find("ControlsHint"), Texts.ColorHint);
+            RefreshControls();
+            Hex.RefreshLanguage(); exactAlpha.RefreshLanguage();
         }
         private void ResetPending() { Plane.Pending = Hue.Pending = Alpha.Pending = false; }
         private string Save()

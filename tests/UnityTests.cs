@@ -199,6 +199,11 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         CheckRaycast(page.Right.Content.Find("Setting_Types_boolean/Toggle").GetComponent<T17Button>(), page.Domain, "setting toggle is topmost selectable");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "settings-" + fixtureCount + "-mods.png"));
         WriteGeometry(page);
+        if (Array.IndexOf(Environment.GetCommandLineArgs(), "-modSettingsLocalizationOnly") >= 0)
+        {
+            IEnumerator localized = VerifyLocalization(page, button); while (localized.MoveNext()) yield return localized.Current;
+            File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: " + assertions + " actual Unity localization assertions"); yield break;
+        }
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-modSettingsTextEditingOnly") >= 0)
         {
             IEnumerator liveOnly = VerifyImmediateEditing(page); while (liveOnly.MoveNext()) yield return liveOnly.Current;

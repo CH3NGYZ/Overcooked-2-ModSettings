@@ -14,6 +14,9 @@ namespace OC2ModSettings
         private GameObject previous;
         private KeyCapture capture;
         private ColorPicker colorPicker;
+        private T17Button colorClose;
+        private T17Text titleLabel;
+        private Func<string> localizedTitle;
         private readonly List<T17Button> buttons = new List<T17Button>();
         internal bool IsOpen { get { return panel != null; } }
         internal Transform Root { get { return panel == null ? null : panel.transform; } }
@@ -21,25 +24,14 @@ namespace OC2ModSettings
         internal void Choose(string title, string[] values, Action<int> selected)
         {
             RectTransform root = Begin(title);
-            ScrollColumn column = new ScrollColumn(root, "Choices", new Vector2(.04f, .08f), new Vector2(.96f, .86f));
-            column.AddScrollbar(page.ScrollbarTemplate); column.Bar.SetEventSystem(page.Domain);
-            float width = Mathf.Max(300, root.rect.width * .92f - 30);
-            for (int i = 0; i < values.Length; i++)
-            {
-                int index = i;
-                T17Button button = NativeUi.CloneButton(page.ButtonTemplate, column.Content, "Choice_" + i, values[i],
-                    delegate { Close(); selected(index); }, page);
-                NativeUi.Box(button.GetComponent<RectTransform>(), 2, i * 48, width - 4, 44);
-                button.SetEventSystem(page.Domain); buttons.Add(button);
-                RowFocus focus = button.gameObject.AddComponent<RowFocus>(); focus.Column = column; focus.Row = button.GetComponent<RectTransform>();
-            }
-            column.Height(values.Length * 48); BindChoices();
+            CreateChoices(root); PopulateChoices(values, selected);
         }
         internal void FocusChoice(int index)
         { if (page.Domain != null && index >= 0 && index < buttons.Count) page.Domain.SetSelectedGameObject(buttons[index].gameObject); }
         internal void Capture(string title, bool shortcut, Action<object> selected)
         {
             RectTransform root = Begin(title + "\n" + Texts.Capture);
+            localizedTitle = delegate { return title + "\n" + Texts.Capture; };
             T17Button clear = NativeUi.CloneButton(page.ButtonTemplate, root, "Clear", Texts.Clear,
                 delegate { Close(); selected(shortcut ? (object)new KeyboardShortcut(KeyCode.None) : KeyCode.None); }, page);
             NativeUi.Box(clear.GetComponent<RectTransform>(), 30, 160, 260, 48); clear.SetEventSystem(page.Domain);
@@ -57,8 +49,9 @@ namespace OC2ModSettings
             NativeUi.Backer(body, new Color(.9f, .93f, .94f, 1));
             OverlayDismiss dismiss = shield.gameObject.AddComponent<OverlayDismiss>();
             dismiss.Initialize(body, page.Domain, Close);
-            T17Text label = NativeUi.Text(page.TextTemplate, NativeUi.Rect(body, "Title", new Vector2(.03f, .87f), new Vector2(.97f, .99f)), "Text", title, 25);
-            label.color = new Color(.1f, .14f, .2f);
+            titleLabel = NativeUi.Text(page.TextTemplate, NativeUi.Rect(body, "Title", new Vector2(.03f, .87f), new Vector2(.97f, .99f)), "Text", title, 25);
+            titleLabel.color = new Color(.1f, .14f, .2f);
+            titleLabel.resizeTextForBestFit = true; titleLabel.resizeTextMinSize = 14; titleLabel.resizeTextMaxSize = 25;
             shield.SetAsLastSibling(); return body;
         }
         private void BindChoices()
@@ -73,6 +66,8 @@ namespace OC2ModSettings
         }
         internal void Close()
         {
+            choiceRow = null; choiceItems = null; choiceSelected = null; choiceColumn = null; colorClose = null;
+            localizedTitle = null; titleLabel = null;
             if (colorPicker != null) { ColorPicker oldPicker = colorPicker; colorPicker = null; oldPicker.Release(); }
             if (capture != null) { capture.Release(); capture = null; }
             GameObject old = panel; panel = null; buttons.Clear();
@@ -80,6 +75,20 @@ namespace OC2ModSettings
             if (previous != null && page.Domain != null && previous.activeInHierarchy) page.Domain.SetSelectedGameObject(previous);
             previous = null;
             page.KeyboardFeedback();
+        }
+        internal void RefreshLanguage()
+        {
+            if (!IsOpen) return;
+            if (localizedTitle != null) NativeUi.Label(titleLabel.transform, localizedTitle());
+            if (choiceRow == null && choiceColumn != null && localizedTitle != null && buttons.Count == 1)
+                NativeUi.Label(buttons[0].transform, Texts.Confirm);
+            if (capture != null) NativeUi.Label(capture.ClearButton.transform, Texts.Clear);
+            if (colorPicker != null)
+            {
+                colorPicker.RefreshLanguage();
+                if (colorClose != null) NativeUi.Label(colorClose.transform, Texts.Close);
+            }
+            RefreshChoices();
         }
     }
 

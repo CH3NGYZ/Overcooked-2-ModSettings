@@ -1,10 +1,10 @@
 # API v1 与编辑器协议
 
-消费者以软依赖声明公共 GUID，通过 `Chainloader.PluginInfos[GUID].Instance` 缓存反射调用。所有签名只用共享的 BepInEx、Unity、BCL 类型；不把本项目类型跨程序集传递。调用方捕获接入错误，不阻断 MOD 主业务。[完整桥接](../examples/ModSettingsClient.cs) 和 [控件示例](../examples/NativeBooleanRenderer.cs) 可由 `scripts/test-examples.ps1` 编译。
+消费者以软依赖声明公共 GUID，通过 `Chainloader.PluginInfos[GUID].Instance` 缓存反射调用。所有服务方法签名只用共享的 BepInEx、Unity、BCL 类型。调用方捕获接入错误，不阻断 MOD 主业务。[源码 SDK](../sdk/README.md)、[完整桥接](../sdk/ModSettingsClient.cs) 和 [控件示例](../examples/NativeBooleanRenderer.cs) 可由 `scripts/test-examples.ps1` 编译。SDK 中的 tag 按公共字段读取，无需与服务共享 CLR 类型身份。
 
 ## 源码与资源内置
 
-把 `src/**/*.cs` 编入宿主，保留 `OC2ModSettings` 命名空间及固定 GUID/版本；宿主自己的 BepInPlugin 类型仍使用自己的 GUID。保留同一实现，排除本项目的 `Properties/AssemblyInfo.cs`，并将以下资源嵌入宿主程序集，LogicalName 必须相同：
+把 `src/**/*.cs` 及 `sdk/*.cs` 编入宿主（SDK 也可通过 `sdk/ModSettings.SDK.projitems` 导入），保留 `OC2ModSettings` 命名空间及固定 GUID/版本；宿主自己的 BepInPlugin 类型仍使用自己的 GUID。保留同一实现，排除本项目的 `Properties/AssemblyInfo.cs`，并将以下资源嵌入宿主程序集，LogicalName 必须相同：
 
 ```xml
 <EmbeddedResource Include="assets\icons\pin-outline.png">
@@ -42,7 +42,13 @@ BepInEx 选择最高公共版本，同版本候选必须拥有相同实现；升
 
 ## 元数据
 
-同时识别跨程序集复制的 `ConfigurationManagerAttributes` 公共字段：`DispName`、`Category`、`CategoryOrder`、`Description`、`Browsable`、`IsAdvanced`、`ReadOnly`、`ShowRangeAsPercent`、`HideDefaultButton`、`Order`、`ObjToStr`、`StrToObj`。覆盖字典使用同名键。布尔值用 `bool`，`Order`、`CategoryOrder`用 `int`；公共tag字段也可用`int?`，null表示未指定。转换器分别为 `Func<object,string>`、`Func<string,object>`。
+从实现版本1.1.0起，原生支持源码 SDK 的 `ModSettingsAttributes`，并继续识别跨程序集复制的旧 `ConfigurationManagerAttributes`。公共字段为 `DispName`、`Category`、`CategoryOrder`、`Description`、`Browsable`、`IsAdvanced`、`ReadOnly`、`ShowRangeAsPercent`、`HideDefaultButton`、`Order`、`ObjToStr`、`StrToObj`。按 ConfigEntry 原始信息 → 旧tag → 新tag → 显式覆盖字典的顺序应用，与新旧tag在数组中的位置无关；同类tag后者覆盖前者。覆盖字典使用同名键，布尔值用 `bool`、顺序用 `int`；tag可用 `bool?`、`int?`，null表示不覆盖，空字符串可清空说明。转换器分别为 `Func<object,string>`、`Func<string,object>`。读取以类型名和公共实例字段为准，不要求引用相同程序集；混淆时保留类型/字段名。
+
+MOD自行切换显示语言时，更新保留在 `ConfigDescription.Tags` 中的同一tag对象，所有文案更新后调用一次 `RefreshV1()` / SDK `Refresh()`；`ConfigureEntryV1` 字典和动作描述则需重新注册，因为注册时复制。该通知只标脏，由页面主线程读取并重建；当前未确认编辑会取消，已保存值不回滚。不要重新Bind、磁盘Reload、改cfg身份或每帧注册；排序值保持稳定。完整接入及源码导入方式见 [SDK说明](../sdk/README.md)。
+
+`ObjToStr`用于当前值及内置下拉的每个候选项，可按消费方自己的语言动态返回显示名；选择仍提交原始值，不把译文当保存值。显式刷新时，已打开内置下拉会在同一ConfigEntry仍有下拉编辑器时恢复，保留原始焦点值和滚动，按当前元数据和候选列表重建。列表打开时另按约0.2秒检查候选值/格式化文案变化，无变化不重建。业务语言、候选来源及历史值转换仍由消费方负责；只有旧翻译字符串的列表无法由公共服务自动翻译。见SDK下拉接入示例。
+
+公共页面自身文字跟随`Localization.GetLanguage()`的全部12种官方语言：英、法、意、德、西、俄、巴西葡萄牙、波兰、简中、日、韩、繁中；未知枚举值回退英文。开关继续使用游戏原生On/Off翻译。游戏语言变化原位更新入口、标题、搜索、工具栏、行按钮、校验提示和已打开弹层，保留编辑草稿、选区、滑条预览及输入捕获；不会替消费方修改语言设置或写cfg。消费方显式Refresh仍遵循上面的结构重建规则。
 
 `CategoryOrder`决定分区先后，高值在前；`Order`只决定分区内配置/独立动作顺序，高值在前。同一owner、同一显示Category为一个分区，普通配置和独立动作共同参与排序；调用方应给该区所有行传相同CategoryOrder。部分行未传时沿用该区显式值；若显式值冲突，统一取最高值；整个分区都未传时为0，允许负数。分区同序时按原始cfg Section（纯动作分区按稳定actionId）进行Ordinal排序，最后才按Category打破同一原始身份的平手，因此只改语言文案不会改变分区位置。行内同Order仍按显示名、原始Identity打破平手。行旁动作完全跟随原配置行，其Category/CategoryOrder不覆盖原行。元数据变化会重建目录；不修改cfg的Section/Key，不要求标题添加序号。旧服务会忽略CategoryOrder，需更新实际当选的公共实现。
 
@@ -77,7 +83,7 @@ ownerGuid/actionId须非空且不含换行。字典在注册时复制，更新�
 
 动作不参加保存或恢复默认。点击前确认注册仍为当前版本，替换/释放后的旧按钮不能执行；Execute/CanExecute异常隔离并记录在公共服务日志，打开的页面显示错误。ClosePage回调异常记录日志，页已关闭时错误要在下次打开前查看日志；回调自身打开的业务弹窗由消费者负责释放。ClosePage是关闭当前公共页，不负责隐藏第三方IMGUI窗口。业务若已有重入保护，Execute继续调用原入口，不在UI复制一套判断。
 
-这是API v1的新增可选方法，不能仅凭 `GetApiVersionV1()==1` 或 `GetVersionV1()=="1.0.0"` 假定存在。通过 `GetMethod("RegisterActionV1", …)` 缓存能力探测，旧版缺方法时跳过动作注册，已有功能照常。完整反射示例见 [ModSettingsClient](../examples/ModSettingsClient.cs)，双界面接入见 [HostUtilities提示词](hostutilities-integration-prompt.md)。
+这是API v1的新增可选方法，不能仅凭 `GetApiVersionV1()==1` 或 `GetVersionV1()=="1.0.0"` 假定存在。通过 `GetMethod("RegisterActionV1", …)` 缓存能力探测，旧版缺方法时跳过动作注册，已有功能照常。完整反射示例见 [ModSettingsClient](../sdk/ModSettingsClient.cs)，双界面接入见 [HostUtilities提示词](hostutilities-integration-prompt.md)。
 
 ```csharp
 IDisposable lease = client.Action(ownerGuid, "open-website", new Dictionary<string, object> {

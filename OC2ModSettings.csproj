@@ -28,6 +28,7 @@
     <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
   <ItemGroup><Compile Include="src\**\*.cs" /><Compile Include="Properties\AssemblyInfo.cs" /></ItemGroup>
+  <Import Project="sdk\ModSettings.SDK.projitems" />
   <ItemGroup>
     <EmbeddedResource Include="assets\icons\pin-outline.png"><LogicalName>OC2ModSettings.Assets.PinOutline.png</LogicalName></EmbeddedResource>
     <EmbeddedResource Include="assets\icons\pin-filled.png"><LogicalName>OC2ModSettings.Assets.PinFilled.png</LogicalName></EmbeddedResource>

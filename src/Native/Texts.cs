@@ -1,34 +1,55 @@
+using System.Collections.Generic;
+
 namespace OC2ModSettings
 {
-    internal static class Texts
+    internal enum UiText
     {
-        private static bool Chinese
+        Title, Search, Advanced, Defaults, Empty, Confirm, Cancel, Clear, Close, Refresh, Loading,
+        Rebind, PressKey, InvalidValue, ReadOnly, Locked, Capture, PickColor, Hue, Opacity, ColorHint
+    }
+
+    internal static partial class Texts
+    {
+        private static readonly Dictionary<UiText, string[]> translations = CreateTranslations();
+        private static Dictionary<UiText, string[]> CreateTranslations()
         {
-            get { SupportedLanguages l = Localization.GetLanguage(); return l == SupportedLanguages.Chinese || l == SupportedLanguages.ChineseTraditional; }
+            Dictionary<UiText, string[]> result = new Dictionary<UiText, string[]>();
+            AddCommon(result); AddEditing(result); AddColor(result); return result;
         }
-        internal static string Pick(string zh, string en) { return Chinese ? zh : en; }
-        internal static string Title { get { return Pick("MOD 设置", "MOD Settings"); } }
-        internal static string Search { get { return Pick("搜索当前 MOD…", "Search current MOD…"); } }
-        internal static string Advanced { get { return Pick("显示高级项", "Show advanced"); } }
-        internal static string Defaults { get { return Pick("恢复默认", "Restore defaults"); } }
-        internal static string Empty { get { return Pick("没有匹配的设置", "No matching settings"); } }
-        internal static string Confirm { get { return Pick("确认", "Confirm"); } }
-        internal static string Cancel { get { return Pick("取消", "Cancel"); } }
-        internal static string Clear { get { return Pick("清空", "Clear"); } }
-        internal static string Rebind { get { return Pick("改键", "Rebind"); } }
-        internal static string PressKey { get { return Pick("请按键", "Press a key"); } }
-        internal static string Close { get { return Pick("关闭", "Close"); } }
-        internal static string Refresh { get { return Pick("刷新", "Refresh"); } }
-        internal static string Loading { get { return Pick("正在读取 MOD 设置…", "Loading MOD settings…"); } }
-        internal static string InvalidValue { get { return Pick("数值有误", "Invalid value"); } }
+        // Shipped SupportedLanguages: English .. ChineseTraditional (0 .. 11).
+        // Each message keeps all twelve languages together; unknown languages use English.
+        internal static string Resolve(UiText key, SupportedLanguages language)
+        {
+            string[] values = translations[key]; int index = (int)language;
+            return values[index >= 0 && index < values.Length ? index : 0];
+        }
+        private static string Get(UiText key) { return Resolve(key, Localization.GetLanguage()); }
+        internal static string Title { get { return Get(UiText.Title); } }
+        internal static string Search { get { return Get(UiText.Search); } }
+        internal static string Advanced { get { return Get(UiText.Advanced); } }
+        internal static string Defaults { get { return Get(UiText.Defaults); } }
+        internal static string Empty { get { return Get(UiText.Empty); } }
+        internal static string Confirm { get { return Get(UiText.Confirm); } }
+        internal static string Cancel { get { return Get(UiText.Cancel); } }
+        internal static string Clear { get { return Get(UiText.Clear); } }
+        internal static string Close { get { return Get(UiText.Close); } }
+        internal static string Refresh { get { return Get(UiText.Refresh); } }
+        internal static string Loading { get { return Get(UiText.Loading); } }
+        internal static string Rebind { get { return Get(UiText.Rebind); } }
+        internal static string PressKey { get { return Get(UiText.PressKey); } }
+        internal static string InvalidValue { get { return Get(UiText.InvalidValue); } }
+        internal static string ReadOnly { get { return Get(UiText.ReadOnly); } }
+        internal static string Locked { get { return Get(UiText.Locked); } }
+        internal static string Capture { get { return Get(UiText.Capture); } }
+        internal static string PickColor { get { return Get(UiText.PickColor); } }
+        internal static string Hue { get { return Get(UiText.Hue); } }
+        internal static string Opacity { get { return Get(UiText.Opacity); } }
+        internal static string ColorHint { get { return Get(UiText.ColorHint); } }
         internal static string Boolean(bool enabled)
         {
             string value;
             return Localization.Get(enabled ? "OptionValue.On" : "OptionValue.Off", out value)
                 ? value : (enabled ? "ON" : "OFF");
         }
-        internal static string ReadOnly { get { return Pick("只读：此类型没有可靠的文本转换器。", "Read-only: no reliable text converter for this type."); } }
-        internal static string Locked { get { return Pick("只读：由 MOD 声明。", "Read-only: declared by the MOD."); } }
-        internal static string Capture { get { return Pick("按下按键或组合键；Esc 取消", "Press a key or shortcut; Esc cancels"); } }
     }
 }

@@ -14,10 +14,11 @@ namespace OC2ModSettings
         internal bool ContentReady { get { return contentBuilt && !rebuilding; } }
         private void RefreshContent()
         {
+            if (language != Localization.GetLanguage()) RefreshLanguage();
             Catalog.ConsumeDirty();
             List<ModConfig> snapshot = Catalog.Snapshot(); snapshot.Sort(CompareMods);
             if (!contentBuilt || contentDomain != Domain || revision != Catalog.Revision
-                || language != Localization.GetLanguage() || builtAdvanced != PageMemory.Advanced
+                || builtAdvanced != PageMemory.Advanced
                 || (active == null ? PageMemory.Selected != null : active.Guid != PageMemory.Selected)
                 || !SameShape(mods, snapshot)) { Reload(snapshot); return; }
             // Values can change while hidden without a structural API refresh. Keep the existing
@@ -33,13 +34,15 @@ namespace OC2ModSettings
         private void Reload(List<ModConfig> snapshot)
         {
             StopContentBuild();
+            NativeOverlay.ChoiceState choice = Overlay.RememberChoice();
             bool firstBuild = !contentBuilt;
             contentBuilt = false;
             Remember(); CancelEdits(false);
             mods = snapshot;
             mods.Sort(CompareMods); pinRevision = pinned.Revision; hoveredPin = null;
             revision = Catalog.Revision;
-            language = Localization.GetLanguage(); contentDomain = Domain;
+            if (language != Localization.GetLanguage()) RefreshLanguage();
+            contentDomain = Domain;
             string selected = PageMemory.Selected;
             active = mods.Find(delegate(ModConfig m) { return m.Guid == selected; });
             if (active == null && mods.Count > 0) active = mods[0];
@@ -53,6 +56,8 @@ namespace OC2ModSettings
             {
                 IEnumerator tabsBuild = BuildTabs(false); while (tabsBuild.MoveNext()) { }
                 BuildSettings(false, false); contentBuilt = true;
+                if (choice != null) foreach (EditorRow editor in editors)
+                    if (ReferenceEquals(editor.Row.Entry, choice.Entry)) { editor.OpenChoices(); Overlay.RestoreChoice(choice); break; }
             }
         }
         private IEnumerator BuildTabs(bool distribute)
@@ -182,6 +187,7 @@ namespace OC2ModSettings
                 delegate { RestoreDefaults(); });
             T17Button refresh = ActionButton(Texts.Refresh, width * .78f, y, width * .22f,
                 delegate { Catalog.Invalidate(); Reload(); });
+            advancedButton = advanced; defaultsButton = defaults; refreshButton = refresh;
             rightControls.Add(advanced); rightControls.Add(defaults); rightControls.Add(refresh); y += 50;
             string category = null;
             if (active != null)
@@ -228,8 +234,7 @@ namespace OC2ModSettings
         private void RestoreDefaults()
         {
             if (active == null) return;
-            List<string> names = new List<string>(); names.Add(Texts.Confirm);
-            Overlay.Choose(Texts.Defaults, names.ToArray(), delegate(int ignored)
+            Overlay.ChooseDefaults(delegate(int ignored)
             {
                 foreach (SettingRow row in active.Rows)
                 {
@@ -324,6 +329,7 @@ namespace OC2ModSettings
             ModMemory memory = active == null ? null : PageMemory.For(active.Guid);
             Right.Content.anchoredPosition = new Vector2(0, memory == null ? 0 : Mathf.Clamp(memory.Scroll, 0, Mathf.Max(0, Right.Content.rect.height - Right.Viewport.rect.height)));
             if (preserveSearch) yield break;
+            if (Overlay.IsOpen) yield break;
             Selectable target = null;
             if (focusRight)
             {

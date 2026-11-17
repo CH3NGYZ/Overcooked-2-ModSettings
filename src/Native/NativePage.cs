@@ -23,7 +23,7 @@ namespace OC2ModSettings
         private ModConfig active;
         private T17Text help;
         private NativeTextInput search;
-        private T17Button close;
+        private T17Button close, advancedButton, defaultsButton, refreshButton;
         private OverlayDismiss outsideDismiss;
         private SupportedLanguages language;
         private string query = string.Empty;
@@ -68,6 +68,8 @@ namespace OC2ModSettings
                 NativeUi.Label(body.Find("HeaderBacker/Header"), Texts.Title);
                 RectTransform title = body.Find("HeaderBacker/Header") as RectTransform;
                 title.anchoredPosition = new Vector2(0, title.anchoredPosition.y);
+                T17Text heading = title.GetComponent<T17Text>();
+                heading.resizeTextForBestFit = true; heading.resizeTextMinSize = 28; heading.resizeTextMaxSize = heading.fontSize;
                 Canvas.ForceUpdateCanvases();
                 ResizeFrame(body as RectTransform);
                 page.Build(body);
@@ -181,7 +183,7 @@ namespace OC2ModSettings
             nextRefresh = Time.realtimeSinceStartup + .2f;
             foreach (EditorRow editor in editors) editor.RefreshActions();
             if (language != Localization.GetLanguage())
-            { language = Localization.GetLanguage(); foreach (EditorRow editor in editors) editor.Refresh(); }
+                RefreshLanguage();
             if (pinRevision != pinned.Revision) ReorderPinnedTabs();
             if (Catalog.ConsumeDirty())
             {
@@ -191,6 +193,21 @@ namespace OC2ModSettings
                 if (revision != Catalog.Revision || !SameShape(mods, snapshot)) Reload(snapshot);
                 else foreach (EditorRow editor in editors) editor.Refresh();
             }
+            Overlay.RefreshChoices();
+        }
+        private void RefreshLanguage()
+        {
+            language = Localization.GetLanguage(); MenuName = Texts.Title;
+            NativeUi.Label(transform.Find("SettingsBody/HeaderBacker/Header"), Texts.Title);
+            search.SetPlaceholder(Texts.Search); NativeUi.Label(close.transform, Texts.Close);
+            if (advancedButton != null) NativeUi.Label(advancedButton.transform, Texts.Advanced + (PageMemory.Advanced ? " ✓" : ""));
+            if (defaultsButton != null) NativeUi.Label(defaultsButton.transform, Texts.Defaults);
+            if (refreshButton != null) NativeUi.Label(refreshButton.transform, Texts.Refresh);
+            Transform empty = Right.Content.Find("Empty"); if (empty != null) NativeUi.Label(empty, Texts.Empty);
+            foreach (EditorRow editor in editors) editor.RefreshLanguage();
+            foreach (NativeTextInput input in GetComponentsInChildren<NativeTextInput>(true))
+                if (input.Invalid) InputValidationChanged(input);
+            Overlay.RefreshLanguage(); RefreshFeedback();
         }
         private void MarkInputDirty() { inputDirty = true; }
         private void RefreshInputBindings()

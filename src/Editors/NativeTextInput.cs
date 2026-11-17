@@ -50,6 +50,8 @@ namespace OC2ModSettings
             input.RefreshLabel(); return input;
         }
         internal void SetValue(string value) { Value = value; if (!HasPending) RefreshLabel(); }
+        internal void SetPlaceholder(string value) { placeholder = value; RefreshLabel(); }
+        internal void RefreshLanguage() { RefreshLabel(); if (Invalid) page.InputValidationChanged(this); }
         internal void Begin()
         {
             if (IsEditing) return;

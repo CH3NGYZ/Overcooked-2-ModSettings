@@ -9,6 +9,10 @@ internal sealed class ConfigurationManagerAttributes
     public int? CategoryOrder;
     public int Order;
     public string Category;
+    public string DispName;
+    public string Description;
+    public bool? Browsable;
+    public bool? ReadOnly;
 }
 
 internal static partial class CoreTests
