@@ -57,8 +57,10 @@ public sealed partial class ModSettingsUnityTests
         T17Button close = page.transform.Find("SettingsBody/CloseModSettings").GetComponent<T17Button>();
         CheckRaycast(close, page.Domain, "header close button has a real reachable hit target");
         NativeTextInput search = page.transform.Find("SettingsBody/Search").GetComponent<NativeTextInput>();
-        Check(search.navigation.selectOnRight == close && close.navigation.selectOnLeft == search,
-            "native horizontal navigation connects search and header close");
+        T17Button clear = page.transform.Find("SettingsBody/ClearSearch").GetComponent<T17Button>();
+        Check(search.navigation.selectOnRight == clear && clear.navigation.selectOnLeft == search
+            && clear.navigation.selectOnRight == close && close.navigation.selectOnLeft == clear,
+            "native horizontal navigation connects search, clear and close in order");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "header-close.png")); yield return new WaitForEndOfFrame(); yield return null;
         Submit(close, page); yield return null;
         Check(Shortcut.ActivePage == null, "header close button closes the same global page");

@@ -57,3 +57,20 @@
 已验证实际Unity内输入方法、原生事件/射线、真实ConfigFile及渲染截图，不等同于物理鼠标/键盘/手柄或真实IME验收。本轮未重跑真实厨房、Steam联机、共享服务全矩阵、FastInit启用组合、其他分辨率/平台、全部第三方自定义转换器；打开性能数字仅代表本机本场景，未测大量配置逐字搜索的性能上限。
 
 没有正式部署、push或发布。新功能需安装本次DLL并重启；所有源码内置公共服务副本需同步完整实现，避免同版本旧副本被选为服务。HostUtilities业务按钮和Section rank仍由其Agent负责。
+
+## 鼠标移出后保留输入焦点（2026-11-20）
+
+安装版 `T17StandaloneInputModule.Process()` 在处理鼠标事件后调用 `UpdateMouseKeyboardFocus()`。鼠标移到其他控件时，这一步会清空 Unity 的选中对象，进而触发输入框的 `OnDeselect()`，结束编辑并释放 IME 状态。`NativeHooks` 只在 MOD 设置自己的输入域且选中的输入框正在编辑时跳过这一步；鼠标悬停、真正的点击、输入校验与保存仍走原路径。
+
+`UnityTextFocus` 注入鼠标坐标、按键状态和文本读数。由实际游戏模块执行 Canvas 射线、指针事件、焦点切换及输入框 `Update()`。场次证据保留在本地 `.validation/`：
+
+| 命令 / 场次 | 结果 |
+| --- | --- |
+| `scripts/test-unity.ps1 -WithoutFastInit -FixtureCount 3 -TextEditingOnly`，修复前 `20261120-204213-431-without-fastinit` | 第 23 项复现：鼠标从搜索框移到「关闭」时，高亮正确转移，但选中对象变空、编辑结束。 |
+| 同一专项，修复后 `20261120-204401-629-without-fastinit` | 101 项通过。搜索保留选区和光标；数值的非法草稿可在鼠标移到面板外后继续修正并立即写盘；色板 Hex 可继续编辑；点击、回车、取消正常结束或切换编辑。 |
+| `scripts/test-unity.ps1 -WithoutFastInit -FixtureCount 30`，`20261120-204506-895-without-fastinit` | 938 项完整面板断言通过，包含相同的 17 项焦点回归。 |
+| `scripts/test.ps1` | .NET 3.5 / C# 3 生产构建及 372 项桌面断言通过。 |
+
+[实际界面截图](../.validation/20261120-204506-895-without-fastinit/text-focus-away.png) 为 3840×2160，显示鼠标移开后继续输入 `boolean` 的搜索结果与光标。`text-focus.txt` 记录搜索框为 462×46 UI，「关闭」为 163.20×46 UI，两者中心相距 757.20 屏幕像素。移动前后焦点仍在搜索框，原选区 `0:4` 保留到后续输入替换。
+
+三个场次的 24 项安装状态及 3 项原存档哈希全部一致，无残留游戏进程。本轮是游戏内脚本输入，未重新验证物理键鼠、系统 IME、联机或 FastInit 启用组合。修复包含在本地 `bin/Release/OC2ModSettings.dll`（1.2.1 / API v1）；实机测试后恢复原安装的 1.2.0，没有正式安装或发布。

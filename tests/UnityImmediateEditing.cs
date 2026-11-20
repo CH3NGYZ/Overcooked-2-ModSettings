@@ -23,6 +23,22 @@ public sealed partial class ModSettingsUnityTests
         Check(page.Right.Content.Find("Setting_Types_boolean") != null && page.Right.Content.Find("Setting_Types_int") == null,
             "replacing search text updates results in the same edit");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "live-search.png")); yield return new WaitForEndOfFrame(); yield return null;
+        T17Button clear = page.transform.Find("SettingsBody/ClearSearch").GetComponent<T17Button>();
+        ClickButton(page, clear);
+        Check(search.Value == "" && page.Right.Content.Find("Setting_Types_int") != null,
+            "clicking the clear button removes the filter and restores the current MOD's results without Enter");
+        yield return null; yield return null; yield return null;
+        Check(page.Domain.currentSelectedGameObject == search.gameObject && search.IsEditing && search.Caret == 0,
+            "clicking clear returns focus and the caret to the empty search field");
+        ScreenCapture.CaptureScreenshot(Path.Combine(output, "search-cleared.png")); yield return new WaitForEndOfFrame(); yield return null;
+        search.TypeText("__no_results__");
+        Check(page.Right.Content.Find("Empty") != null, "typing resumes immediately after clicking clear");
+        search.Confirm(); clear.Select(); yield return null; yield return null;
+        ExecuteEvents.Execute(clear.gameObject, new BaseEventData(page.Domain), ExecuteEvents.submitHandler);
+        yield return null; yield return null; yield return null;
+        Check(search.Value == "" && search.IsEditing && page.Domain.currentSelectedGameObject == search.gameObject
+            && page.Right.Content.Find("Empty") == null, "native submit on clear removes a confirmed no-results query and restores typing focus");
+        search.TypeText("boolean");
         search.EditKey(KeyCode.A, true, false); search.EditKey(KeyCode.Backspace, false, false);
         Check(page.Right.Content.Find("Setting_Types_int") != null && search.IsEditing, "clearing search restores results without confirming");
         search.Cancel();

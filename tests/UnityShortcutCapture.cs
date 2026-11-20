@@ -52,19 +52,21 @@ public sealed partial class ModSettingsUnityTests
     {
         T17Button button = page.transform.Find("SettingsBody/ToggleShortcut").GetComponent<T17Button>();
         RectTransform rect = button.GetComponent<RectTransform>(), body = button.transform.parent as RectTransform;
+        T17Button top = page.Left.Content.GetChild(0).GetComponent<T17Button>();
         Rect bounds = BoundsIn(rect, body);
         float listBottom = BoundsIn(page.Left.Viewport, body).yMin;
+        float listLeft = BoundsIn((RectTransform)top.transform, body).xMin;
         Check(rect.rect.width <= 180 && rect.rect.height == 40 && listBottom - bounds.yMax >= 6
             && (bounds.yMin - body.rect.yMin) / body.rect.height > .125f
-            && bounds.xMax < body.rect.xMin + body.rect.width * .21f, "compact shortcut fits the left notch without touching the list or description");
+            && bounds.xMax < body.rect.xMin + body.rect.width * .21f && Mathf.Abs(bounds.xMin - listLeft) < .1f,
+            "compact shortcut aligns with list buttons and fits the left notch without touching the list or description");
         CheckRaycast(button, page.Domain, "shortcut button is a real topmost hit target");
         File.WriteAllText(Path.Combine(output, "shortcut-button-geometry.txt"), "Screen=" + Screen.width + "x" + Screen.height
-            + "\nShortcut=" + rect.rect + "\nGap below list=" + (listBottom - bounds.yMax));
+            + "\nShortcut=" + bounds + "\nGap below list=" + (listBottom - bounds.yMax) + "\nList button left=" + listLeft);
         KeyCode original = Shortcut.Key;
         Check(Caption(button.transform) == ValueCodec.Format(Shortcut.Setting, original), "idle footer shows only the current key");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "shortcut-button.png")); yield return new WaitForEndOfFrame(); yield return null;
 
-        T17Button top = page.Left.Content.GetChild(0).GetComponent<T17Button>();
         page.Domain.SetSelectedGameObject(top.gameObject); yield return null; yield return null;
         ExecuteEvents.Execute(top.gameObject, new AxisEventData(page.Domain) { moveDir = MoveDirection.Up }, ExecuteEvents.moveHandler);
         yield return null; yield return null;
@@ -112,7 +114,7 @@ public sealed partial class ModSettingsUnityTests
             Check(manuallyEdited.Bind(setting.Definition, NativeShortcut.DefaultKey, setting.Description).Value == NativeShortcut.DefaultKey,
                 "manually configured reserved key falls back to BackQuote");
 
-            ClickShortcutButton(page, button); yield return null; yield return null;
+            ClickButton(page, button); yield return null; yield return null;
             Check(page.IsRecordingToggleKey, "click on the real footer hit starts listening");
             press = PlayShortcutKey(original, false); while (press.MoveNext()) yield return press.Current;
             Check(Shortcut.ActivePage == page && Shortcut.Key == original && !page.IsRecordingToggleKey && !page.Domain.IsDisabled(),
@@ -129,7 +131,7 @@ public sealed partial class ModSettingsUnityTests
                     "records " + sample.Key + " and displays only its key label");
             }
 
-            ClickShortcutButton(page, button); yield return null; yield return null;
+            ClickButton(page, button); yield return null; yield return null;
             KeyCode replacement = original == KeyCode.Alpha7 ? KeyCode.Alpha8 : KeyCode.Alpha7;
             string digit = replacement == KeyCode.Alpha7 ? "7" : "8";
             scriptedShortcutModifier = KeyCode.LeftControl;
@@ -219,18 +221,5 @@ public sealed partial class ModSettingsUnityTests
             "typing the bound digit in a numeric input saves immediately without closing settings");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "shortcut-typing.png")); yield return new WaitForEndOfFrame(); yield return null;
         number.Cancel(); entry.BoxedValue = original;
-    }
-    private void ClickShortcutButton(NativePage page, T17Button button)
-    {
-        RectTransform rect = (RectTransform)button.transform;
-        PointerEventData pointer = new PointerEventData(page.Domain) { button = PointerEventData.InputButton.Left,
-            position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)) };
-        List<RaycastResult> hits = new List<RaycastResult>(); page.Domain.RaycastAll(pointer, hits);
-        Check(hits.Count > 0 && ExecuteEvents.GetEventHandler<IPointerClickHandler>(hits[0].gameObject) == button.gameObject,
-            "footer click routes through the native canvas hit");
-        pointer.pointerCurrentRaycast = pointer.pointerPressRaycast = hits[0];
-        ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerDownHandler);
-        ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerUpHandler);
-        ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerClickHandler);
     }
 }

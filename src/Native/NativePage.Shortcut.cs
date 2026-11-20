@@ -23,10 +23,10 @@ namespace OC2ModSettings
         {
             shortcutButton = NativeUi.CloneButton(ButtonTemplate, body, "ToggleShortcut", "", BeginShortcutCapture, this);
             RectTransform rect = (RectTransform)shortcutButton.transform;
-            // Fits beneath the left list while clearing the highest point of the native notch.
-            rect.anchorMin = rect.anchorMax = new Vector2(.035f, .15f);
+            // Align with the visible list buttons and clear the highest point of the native notch.
+            rect.anchorMin = rect.anchorMax = new Vector2(ContentLeftAnchor, .15f);
             rect.pivot = new Vector2(0, .5f);
-            rect.sizeDelta = new Vector2(168, 40); rect.anchoredPosition = new Vector2(12, 0);
+            rect.sizeDelta = new Vector2(168, 40); rect.anchoredPosition = new Vector2(ModTabInset, 0);
             RowFocus focus = shortcutButton.gameObject.AddComponent<RowFocus>();
             focus.Selected = delegate { onRight = false; RefreshPins(); };
             RefreshShortcutKey();

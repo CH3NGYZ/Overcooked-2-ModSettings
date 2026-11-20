@@ -4,7 +4,7 @@ namespace OC2ModSettings
 {
     internal enum UiText
     {
-        Title, Search, Advanced, Defaults, Empty, Confirm, Cancel, Clear, Close, Refresh, Loading,
+        Title, PanelTitle, Search, Advanced, Defaults, Empty, Confirm, Cancel, Clear, Close, Refresh, Loading,
         Rebind, PressKey, InvalidValue, ReadOnly, Locked, Capture, PickColor, Hue, Opacity, ColorHint
     }
 
@@ -25,6 +25,7 @@ namespace OC2ModSettings
         }
         private static string Get(UiText key) { return Resolve(key, Localization.GetLanguage()); }
         internal static string Title { get { return Get(UiText.Title); } }
+        internal static string PanelTitle { get { return Get(UiText.PanelTitle); } }
         internal static string Search { get { return Get(UiText.Search); } }
         internal static string Advanced { get { return Get(UiText.Advanced); } }
         internal static string Defaults { get { return Get(UiText.Defaults); } }

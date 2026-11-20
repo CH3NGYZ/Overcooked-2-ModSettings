@@ -50,7 +50,7 @@ namespace OC2ModSettings
             PageMemory.Selected = active == null ? null : active.Guid;
             if (firstBuild)
             {
-                rebuilding = true; search.interactable = false; ShowHelp(Texts.Loading);
+                rebuilding = true; search.interactable = clearSearch.interactable = false; ShowHelp(Texts.Loading);
                 initialBuild = StartCoroutine(LoadSettings());
             }
             else
@@ -79,7 +79,7 @@ namespace OC2ModSettings
                     ModConfig mod = mods[i];
                     T17Button button = NativeUi.CloneButton(ButtonTemplate, Left.Content, "Mod_" + mod.Guid, mod.Name,
                         delegate { Activate(mod.Guid); }, this);
-                    NativeUi.Box(button.GetComponent<RectTransform>(), 4, i * 72, Mathf.Max(100, width - 8), 68);
+                    NativeUi.Box(button.GetComponent<RectTransform>(), ModTabInset, i * 72, Mathf.Max(100, width - 2 * ModTabInset), 68);
                     foreach (T17Text text in button.GetComponentsInChildren<T17Text>(true))
                     {
                         text.fontSize = 23; text.resizeTextForBestFit = false; text.lineSpacing = 1; text.verticalOverflow = VerticalWrapMode.Truncate;
@@ -132,7 +132,7 @@ namespace OC2ModSettings
                 yield return current;
             }
             initialBuild = null; rebuilding = false; contentBuilt = complete;
-            Left.Content.gameObject.SetActive(true); Right.Content.gameObject.SetActive(true); search.interactable = true;
+            Left.Content.gameObject.SetActive(true); Right.Content.gameObject.SetActive(true); search.interactable = clearSearch.interactable = true;
             if (complete) StartCoroutine(RestoreLayout(false, true, false));
         }
         private void StopContentBuild()
@@ -140,7 +140,7 @@ namespace OC2ModSettings
             if (initialBuild == null) return;
             StopCoroutine(initialBuild); initialBuild = null; rebuilding = false; contentBuilt = false;
             DisposeEditors(); NativeUi.ClearChildren(Right.Content); rightControls.Clear();
-            Left.Content.gameObject.SetActive(true); Right.Content.gameObject.SetActive(true); search.interactable = true;
+            Left.Content.gameObject.SetActive(true); Right.Content.gameObject.SetActive(true); search.interactable = clearSearch.interactable = true;
         }
         private IEnumerator PopulateInitialContent()
         {
@@ -185,7 +185,7 @@ namespace OC2ModSettings
             NativeUi.ClearChildren(Right.Content);
             ShowHelp(null);
             float width = Mathf.Max(300, Right.Viewport.rect.width), y = 0;
-            search.SetValue(query); rightControls.Add(search); rightControls.Add(close);
+            search.SetValue(query); rightControls.Add(search); rightControls.Add(clearSearch); rightControls.Add(close);
             T17Button advanced = ActionButton(Texts.Advanced + (PageMemory.Advanced ? " ✓" : ""), 0, y, width * .45f,
                 delegate { PageMemory.Advanced = !PageMemory.Advanced; BuildSettings(true, false); });
             T17Button defaults = ActionButton(Texts.Defaults, width * .46f, y, width * .31f,
@@ -295,7 +295,8 @@ namespace OC2ModSettings
                 n.selectOnLeft = current; control.navigation = n;
                 RowFocus focus = control.GetComponent<RowFocus>();
                 if (focus == null) focus = control.gameObject.AddComponent<RowFocus>();
-                focus.Column = control == search || control == close ? null : Right; if (focus.Row == null) focus.Row = control.GetComponent<RectTransform>();
+                focus.Column = control.transform.IsChildOf(Right.Content) ? Right : null;
+                if (focus.Row == null) focus.Row = control.GetComponent<RectTransform>();
                 focus.Selected = delegate
                 {
                     onRight = true;
@@ -303,10 +304,12 @@ namespace OC2ModSettings
                     RefreshFeedback();
                 };
             }
-            Navigation searchNav = search.navigation; searchNav.selectOnRight = close;
-            searchNav.selectOnDown = rightControls.Count > 2 ? rightControls[2] : null; search.navigation = searchNav;
-            Navigation closeNav = close.navigation; closeNav.selectOnLeft = search; closeNav.selectOnUp = null;
-            closeNav.selectOnDown = searchNav.selectOnDown; close.navigation = closeNav;
+            Navigation searchNav = search.navigation; searchNav.selectOnRight = clearSearch;
+            searchNav.selectOnDown = advancedButton; search.navigation = searchNav;
+            Navigation clearNav = clearSearch.navigation; clearNav.selectOnLeft = search; clearNav.selectOnRight = close;
+            clearNav.selectOnUp = null; clearNav.selectOnDown = advancedButton; clearSearch.navigation = clearNav;
+            Navigation closeNav = close.navigation; closeNav.selectOnLeft = clearSearch; closeNav.selectOnUp = null;
+            closeNav.selectOnDown = advancedButton; close.navigation = closeNav;
             foreach (EditorRow row in editors)
                 for (int i = 0; i < row.Controls.Count; i++)
                 {

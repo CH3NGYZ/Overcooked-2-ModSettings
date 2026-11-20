@@ -8,6 +8,7 @@ namespace OC2ModSettings
         {
             // English, French, Italian, German, Spanish, Russian, Brazilian, Polish, Chinese, Japanese, Korean, ChineseTraditional.
             t.Add(UiText.Title, new string[] { "MOD Settings", "Paramètres des mods", "Impostazioni mod", "Mod-Einstellungen", "Ajustes de mods", "Настройки модов", "Configurações de mods", "Ustawienia modów", "MOD 设置", "MOD 設定", "모드 설정", "MOD 設定" });
+            t.Add(UiText.PanelTitle, new string[] { "MOD Settings Panel", "Paramètres des mods", "Impostazioni mod", "Mod-Einstellungen", "Ajustes de mods", "Настройки модов", "Configurações de mods", "Ustawienia modów", "MOD 设置面板", "MOD 設定パネル", "모드 설정 패널", "MOD 設定面板" });
             t.Add(UiText.Search, new string[] { "Search current MOD…", "Rechercher dans ce mod…", "Cerca nella mod attuale…", "Aktuellen Mod durchsuchen…", "Buscar en este mod…", "Поиск в текущем моде…", "Buscar neste mod…", "Szukaj w bieżącym modzie…", "搜索当前 MOD…", "現在の MOD を検索…", "현재 모드 검색…", "搜尋目前 MOD…" });
             t.Add(UiText.Advanced, new string[] { "Show advanced", "Options avancées", "Mostra opzioni avanzate", "Erweiterte Optionen", "Mostrar opciones avanzadas", "Расширенные настройки", "Mostrar opções avançadas", "Opcje zaawansowane", "显示高级项", "詳細設定を表示", "고급 설정 표시", "顯示進階項目" });
             t.Add(UiText.Defaults, new string[] { "Restore defaults", "Valeurs par défaut", "Ripristina predefiniti", "Standardwerte", "Restablecer valores", "По умолчанию", "Restaurar padrões", "Przywróć domyślne", "恢复默认", "初期値に戻す", "기본값 복원", "還原預設值" });

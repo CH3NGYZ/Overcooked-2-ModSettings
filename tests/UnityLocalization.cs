@@ -68,13 +68,15 @@ public sealed partial class ModSettingsUnityTests
             numeric.Begin(); numeric.ChangeText("-"); int caret = numeric.Caret;
             byte[] before = File.ReadAllBytes(file.ConfigFilePath);
             Transform footer = page.transform.Find("SettingsBody/ToggleShortcut");
+            Transform clear = page.transform.Find("SettingsBody/ClearSearch");
             string currentKey = ValueCodec.Format(Shortcut.Setting, Shortcut.Key);
             foreach (SupportedLanguages current in Enum.GetValues(typeof(SupportedLanguages)))
             {
                 testLanguage = current; yield return new WaitForSecondsRealtime(.6f); yield return null;
                 Check(Caption(entryButton.transform) == Texts.Title, "native entry follows " + current);
-                Check(Caption(page.transform.Find("SettingsBody/HeaderBacker/Header")) == Texts.Title && page.MenuName == Texts.Title, "cached banner follows " + current);
-                Check(Caption(page.transform.Find("SettingsBody/CloseModSettings")) == Texts.Close && Caption(search.transform) == Texts.Search, "cached close/search follow " + current);
+                VerifyBanner(page);
+                Check(Caption(page.transform.Find("SettingsBody/CloseModSettings")) == Texts.Close && Caption(search.transform) == Texts.Search
+                    && Caption(clear) == "×", "cached search and close follow language and keep a universal clear symbol in " + current);
                 Check(Caption(footer) == currentKey, "idle shortcut shows only the key in " + current);
                 T17Button[] toolbar = page.Right.Content.GetComponentsInChildren<T17Button>();
                 Check(Caption(toolbar[0].transform).StartsWith(Texts.Advanced) && Caption(toolbar[1].transform) == Texts.Defaults

@@ -212,6 +212,7 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         }
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-modSettingsTextEditingOnly") >= 0)
         {
+            IEnumerator focusOnly = VerifyTextFocus(page); while (focusOnly.MoveNext()) yield return focusOnly.Current;
             IEnumerator liveOnly = VerifyImmediateEditing(page); while (liveOnly.MoveNext()) yield return liveOnly.Current;
             IEnumerator textOnly = VerifyTextSelection(page); while (textOnly.MoveNext()) yield return textOnly.Current;
             IEnumerator sortOnly = VerifyCategoryOrder(page); while (sortOnly.MoveNext()) yield return sortOnly.Current;
@@ -231,6 +232,7 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         IEnumerator types = VerifyTypeEditors(page); while (types.MoveNext()) yield return types.Current;
         IEnumerator immediate = VerifyImmediateEditing(page); while (immediate.MoveNext()) yield return immediate.Current;
         IEnumerator selection = VerifyTextSelection(page); while (selection.MoveNext()) yield return selection.Current;
+        IEnumerator textFocus = VerifyTextFocus(page); while (textFocus.MoveNext()) yield return textFocus.Current;
         IEnumerator categories = VerifyCategoryOrder(page); while (categories.MoveNext()) yield return categories.Current;
         IEnumerator colors = VerifyColorPicker(page); while (colors.MoveNext()) yield return colors.Current;
         IEnumerator actions = VerifyActions(page); while (actions.MoveNext()) yield return actions.Current;
@@ -284,7 +286,7 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         File.WriteAllText(Path.Combine(output, "geometry.txt"), "Screen=" + Screen.width + "x" + Screen.height
             + "\nLeftViewport=" + page.Left.Viewport.rect + "\nRightViewport=" + page.Right.Viewport.rect
             + "\nLeftContent=" + page.Left.Content.rect + "\nRightContent=" + page.Right.Content.rect);
-        foreach (string path in new string[] { "SettingsBody", "SettingsBody/HeaderBacker", "SettingsBody/HeaderBacker/Header", "SettingsBody/Search", "SettingsBody/Explanation", "SettingsBody/CloseModSettings" })
+        foreach (string path in new string[] { "SettingsBody", "SettingsBody/HeaderBacker", "SettingsBody/HeaderBacker/Header", "SettingsBody/Search", "SettingsBody/ClearSearch", "SettingsBody/Explanation", "SettingsBody/CloseModSettings" })
         {
             Transform item = page.transform.Find(path); RectTransform rect = item as RectTransform;
             Vector3[] corners = new Vector3[4]; rect.GetWorldCorners(corners);
@@ -306,6 +308,19 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         { trace.Add(hit.gameObject.name); if (first == null) first = hit.gameObject.GetComponentInParent<Selectable>(); }
         File.AppendAllText(Path.Combine(output, "raycasts.txt"), label + ": " + string.Join(",", trace.ToArray()) + Environment.NewLine);
         Check(first == target, label);
+    }
+    private void ClickButton(NativePage page, T17Button button)
+    {
+        RectTransform rect = (RectTransform)button.transform;
+        PointerEventData pointer = new PointerEventData(page.Domain) { button = PointerEventData.InputButton.Left,
+            position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)) };
+        List<RaycastResult> hits = new List<RaycastResult>(); page.Domain.RaycastAll(pointer, hits);
+        Check(hits.Count > 0 && ExecuteEvents.GetEventHandler<IPointerClickHandler>(hits[0].gameObject) == button.gameObject,
+            button.name + " click routes through the native canvas hit");
+        pointer.pointerCurrentRaycast = pointer.pointerPressRaycast = hits[0];
+        ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerDownHandler);
+        ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerUpHandler);
+        ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, pointer, ExecuteEvents.pointerClickHandler);
     }
     private IEnumerator VerifyRebuild(FrontendRootMenu root, T17Button original)
     {

@@ -19,6 +19,8 @@ namespace OC2ModSettings
                 null, new HarmonyMethod(typeof(NativeHooks), "DomainCreated"));
             harmony.Patch(AccessTools.Method(typeof(T17EventSystem), "ResetSystem"),
                 null, new HarmonyMethod(typeof(NativeHooks), "DomainReset"));
+            harmony.Patch(AccessTools.Method(typeof(T17StandaloneInputModule), "UpdateMouseKeyboardFocus"),
+                new HarmonyMethod(typeof(NativeHooks), "PreserveTextFocus"));
             harmony.Patch(AccessTools.Method(typeof(PlayerControls), "OnEnable"),
                 null, new HarmonyMethod(typeof(NativeHooks), "PlayerEnabled"));
             harmony.Patch(AccessTools.Method(typeof(InGameRootMenu), "DoNavigateOnUICancel"),
@@ -27,6 +29,13 @@ namespace OC2ModSettings
                 new HarmonyMethod(typeof(NativeHooks), "LobbyCancel"));
             harmony.Patch(AccessTools.Method(typeof(ClientLobbyFlowController), "ChangeTeam", new Type[] { typeof(Team17.Online.User) }),
                 new HarmonyMethod(typeof(NativeHooks), "LobbyTeam"));
+        }
+        private static bool PreserveTextFocus(T17StandaloneInputModule __instance)
+        {
+            NativePage page = ModSettingsPlugin.Instance == null ? null : ModSettingsPlugin.Instance.ActivePage;
+            // T17 clears selection when switching between pointer and navigation focus.
+            // Preserve an active text edit here; real presses still deselect in ProcessMousePress.
+            return page == null || page.Domain.gameObject != __instance.gameObject || !page.IsEditingText;
         }
         private static bool LobbyCancel()
         {

@@ -25,7 +25,7 @@ namespace OC2ModSettings
         private ModConfig active;
         private T17Text help;
         private NativeTextInput search;
-        private T17Button close, advancedButton, defaultsButton, refreshButton;
+        private T17Button clearSearch, close, advancedButton, defaultsButton, refreshButton;
         private OverlayDismiss outsideDismiss;
         private SupportedLanguages language;
         private string query = string.Empty;
@@ -65,16 +65,9 @@ namespace OC2ModSettings
                 Transform body = go.transform.Find("SettingsBody");
                 foreach (string path in new string[] { "ContentPC", "ContentConsole", "Cancel", "Confirm", "SafeAreaAdjuster" })
                 { Transform child = body.Find(path); if (child != null) UnityEngine.Object.DestroyImmediate(child.gameObject); }
-                // Decorations remain native; text outside the new body must not show the game's build number.
-                foreach (T17Text text in go.GetComponentsInChildren<T17Text>(true))
-                    if (text != body.Find("HeaderBacker/Header").GetComponent<T17Text>()) text.gameObject.SetActive(false);
-                NativeUi.Label(body.Find("HeaderBacker/Header"), Texts.Title);
-                RectTransform title = body.Find("HeaderBacker/Header") as RectTransform;
-                title.anchoredPosition = new Vector2(0, title.anchoredPosition.y);
-                T17Text heading = title.GetComponent<T17Text>();
-                heading.resizeTextForBestFit = true; heading.resizeTextMinSize = 28; heading.resizeTextMaxSize = heading.fontSize;
                 Canvas.ForceUpdateCanvases();
                 ResizeFrame(body as RectTransform);
+                page.BuildBanner(body);
                 page.Build(body);
                 page.outsideDismiss = host.Root.AddComponent<OverlayDismiss>();
                 NavigateOnUICancel cancel = go.AddComponent<NavigateOnUICancel>();
@@ -93,23 +86,32 @@ namespace OC2ModSettings
         }
         private void Build(Transform body)
         {
-            RectTransform area = NativeUi.Rect(body, "ModSettingsContent", new Vector2(.035f, .18f), new Vector2(.97f, .825f));
+            RectTransform area = NativeUi.Rect(body, "ModSettingsContent", new Vector2(ContentLeftAnchor, .18f), new Vector2(.97f, HeaderControlAnchor));
+            // Share the top controls' anchor; keep only a small gap below their lower edge.
+            area.offsetMax = new Vector2(0, -HeaderControlHeight * .5f - ContentTopGap);
             Left = new ScrollColumn(area, "Mods", Vector2.zero, new Vector2(.28f, 1));
             Right = new ScrollColumn(area, "Settings", new Vector2(.30f, 0), Vector2.one);
             Left.AddScrollbar(ScrollbarTemplate, Palette.Normal); Right.AddScrollbar(ScrollbarTemplate, Palette.Normal);
             search = NativeTextInput.Create(this, body, "Search", query, Texts.Search);
             search.Changed = delegate(string value)
             { Remember(); query = value; BuildSettings(false, true); return true; };
-            RectTransform searchRect = search.GetComponent<RectTransform>();
-            searchRect.anchorMin = new Vector2(.61f, .89f); searchRect.anchorMax = new Vector2(.87f, .89f);
-            searchRect.sizeDelta = new Vector2(0, 46); searchRect.anchoredPosition = Vector2.zero;
+            const float closeStart = .885f, controlGap = 10;
+            PlaceHeaderControl((RectTransform)search.transform, .61f, closeStart, 0, -HeaderControlHeight - 2 * controlGap);
+            clearSearch = NativeUi.CloneButton(ButtonTemplate, body, "ClearSearch", "×", ClearSearch, this);
+            PlaceHeaderControl((RectTransform)clearSearch.transform, closeStart, closeStart, -HeaderControlHeight - controlGap, -controlGap);
+            clearSearch.SetEventSystem(Domain);
             // Leave the native frame's lower-left notch clear for the Description footer.
             help = NativeUi.Text(TextTemplate, NativeUi.Rect(body, "Explanation", new Vector2(.21f, .105f), new Vector2(.965f, .165f)), "Help", "", 18);
             close = NativeUi.CloneButton(ButtonTemplate, body, "CloseModSettings", Texts.Close, delegate { Hide(true, false); }, this);
-            RectTransform rect = close.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(.885f, .89f); rect.anchorMax = new Vector2(.97f, .89f);
-            rect.sizeDelta = new Vector2(0, 46); rect.anchoredPosition = Vector2.zero; close.SetEventSystem(Domain);
+            PlaceHeaderControl((RectTransform)close.transform, closeStart, .97f, 0, 0);
+            close.SetEventSystem(Domain);
             Overlay = new NativeOverlay(this, body);
             BuildShortcut(body);
+        }
+        private void ClearSearch()
+        {
+            if (!ownedState || rebuilding) return;
+            search.Select(); search.Begin(); search.ChangeText(string.Empty);
         }
         internal void Open()
         {
@@ -204,7 +206,7 @@ namespace OC2ModSettings
         private void RefreshLanguage()
         {
             language = Localization.GetLanguage(); MenuName = Texts.Title;
-            NativeUi.Label(transform.Find("SettingsBody/HeaderBacker/Header"), Texts.Title);
+            NativeUi.Label(bannerTitle.transform, Texts.PanelTitle);
             search.SetPlaceholder(Texts.Search); NativeUi.Label(close.transform, Texts.Close);
             RefreshShortcutKey();
             if (advancedButton != null) NativeUi.Label(advancedButton.transform, Texts.Advanced + (PageMemory.Advanced ? " ✓" : ""));
