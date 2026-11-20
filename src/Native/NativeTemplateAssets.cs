@@ -79,19 +79,14 @@ namespace OC2ModSettings
         private Texture2D CopyTexture(Texture2D source)
         {
             Object found; if (copies.TryGetValue(source, out found)) return (Texture2D)found;
-            Texture2D copy = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
-            RenderTexture previous = RenderTexture.active;
-            RenderTexture staging = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+            Texture2D copy = NativeTextureReadback.Read(source, source.width, source.height, Vector2.one, Vector2.zero);
             try
             {
-                // Imported UI textures need not be CPU-readable; copy through the render target.
-                Graphics.Blit(source, staging); RenderTexture.active = staging;
-                copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0); copy.Apply(false, true);
+                copy.Apply(false, true);
                 copy.filterMode = source.filterMode; copy.wrapMode = source.wrapMode;
                 return Retain(source, copy);
             }
             catch { Object.Destroy(copy); throw; }
-            finally { RenderTexture.active = previous; RenderTexture.ReleaseTemporary(staging); }
         }
         public void Dispose()
         {

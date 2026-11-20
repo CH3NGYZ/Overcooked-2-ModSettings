@@ -27,6 +27,8 @@
   <ItemGroup><Compile Include="UnityTextSelection.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityCategoryOrder.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityLocalization.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityShortcutCapture.cs" /><Compile Include="UnityNativeTheme.cs" /></ItemGroup>
   <ItemGroup><Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
+  <ItemGroup><Reference Include="UnityEngine.InputModule"><HintPath>$(Managed)\UnityEngine.InputModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

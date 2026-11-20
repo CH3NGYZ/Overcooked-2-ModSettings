@@ -103,14 +103,14 @@ public sealed partial class ModSettingsUnityTests
         Check(picker.Alpha.navigation.selectOnDown == picker.Hex && picker.Hex.navigation.selectOnRight.transform.IsChildOf(picker.transform),
             "modal explicit navigation remains within the picker");
         yield return new WaitForSecondsRealtime(.35f);
-        Check(SameColor(picker.Hex.targetGraphic.color, SettingsControlFeedback.Normal)
-            && SameColor(alpha.targetGraphic.color, SettingsControlFeedback.Normal)
+        Check(SameColor(picker.Hex.targetGraphic.color, page.Palette.Normal)
+            && SameColor(alpha.targetGraphic.color, page.Palette.Normal)
             && SameColor(picker.Hex.targetGraphic.canvasRenderer.GetColor(), Color.white)
             && SameColor(alpha.targetGraphic.canvasRenderer.GetColor(), Color.white),
             "modal inputs retain exact normal blue after the native tint tween duration");
         HoverSettings(page, picker.Hex.GetComponent<RectTransform>(), new Vector2(.5f, .5f));
-        Check(SameColor(picker.Hex.targetGraphic.color, SettingsControlFeedback.Highlight)
-            && SameColor(alpha.targetGraphic.color, SettingsControlFeedback.Normal)
+        Check(SameColor(picker.Hex.targetGraphic.color, page.Palette.Highlight)
+            && SameColor(alpha.targetGraphic.color, page.Palette.Normal)
             && SameColor(picker.Hex.targetGraphic.canvasRenderer.GetColor(), Color.white),
             "modal Hex highlights only its own input without a leftover native tint");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "color-picker-focus.png")); yield return new WaitForEndOfFrame(); yield return null;

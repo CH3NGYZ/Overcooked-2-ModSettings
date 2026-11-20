@@ -83,7 +83,7 @@ namespace OC2ModSettings
         private void Update()
         {
             if (!IsEditing || Time.frameCount <= started) return;
-            if (Input.GetKeyDown(KeyCode.BackQuote)) return;
+            if (page.Shortcut.Pressed) return;
             // The global page consumes cancel on release through its ordered Cancel handler.
             // Cancelling here on key-down would consume the draft twice across two frames.
             if (Input.GetKeyDown(KeyCode.Escape)) return;

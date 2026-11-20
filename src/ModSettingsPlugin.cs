@@ -11,7 +11,7 @@ namespace OC2ModSettings
     public sealed class ModSettingsPlugin : BaseUnityPlugin
     {
         public const string Guid = "com.ch3ngyz.plugin.overcooked2.modsettings";
-        public const string Version = "1.1.1";
+        public const string Version = "1.2.0";
         public const string DisplayName = "MOD Settings / MOD 设置";
         internal const string Author = "Github@CH3NGYZ";
         internal const string Description = "《胡闹厨房 2》原生公共 MOD 设置页面，支持自动发现配置、即时校验保存、改键、色板和业务按钮。";
@@ -77,7 +77,7 @@ namespace OC2ModSettings
         private void Update()
         {
             if (entry != null) entry.Tick();
-            if (shortcut != null) shortcut.Tick(Input.GetKeyDown(KeyCode.BackQuote));
+            if (shortcut != null) shortcut.Tick(shortcut.Pressed);
         }
         internal void Report(string target, Exception error) { Logger.LogError(target + "\n" + error); }
         private void OnDestroy()

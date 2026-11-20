@@ -1,5 +1,3 @@
-using System;
-using BepInEx.Configuration;
 using UnityEngine;
 
 namespace OC2ModSettings
@@ -18,7 +16,7 @@ namespace OC2ModSettings
         {
             page.Overlay.Close(); CancelKeyCapture();
             keyCapture = Root.gameObject.AddComponent<KeyCapture>();
-            keyCapture.Initialize(page.Domain, false,
+            keyCapture.Initialize(page, KeyCapture.Mode.Single,
                 delegate(object value) { CancelKeyCapture(); Commit(value); },
                 delegate { CancelKeyCapture(); page.CaptureCancelled(); });
             RefreshKeyCapture();
@@ -26,7 +24,7 @@ namespace OC2ModSettings
         private void CancelKeyCapture()
         {
             KeyCapture old = keyCapture; keyCapture = null;
-            if (old != null) { old.Release(); old.enabled = false; UnityEngine.Object.Destroy(old); }
+            if (old != null) old.Stop();
             RefreshKeyCapture();
         }
         private void RefreshKeyCapture()

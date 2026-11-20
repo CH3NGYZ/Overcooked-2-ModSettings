@@ -6,10 +6,12 @@ namespace OC2ModSettings
 {
     internal static class NativePageTemplate
     {
+        internal const string ButtonPath = "SettingsBody/ContentPC/Viewport/Content/ScreenAdjuster";
         private static GameObject storage;
         private static NativeTemplateAssets assets;
         internal static Transform Source { get; private set; }
         internal static Rect VisibleBody { get; private set; }
+        internal static NativePalette Palette { get; private set; }
         internal static void Capture(FrontendRootMenu root)
         {
             if (Source != null || root == null) return;
@@ -28,6 +30,9 @@ namespace OC2ModSettings
             storage.SetActive(false); UnityEngine.Object.DontDestroyOnLoad(storage);
             try
             {
+                Transform button = source.Find(ButtonPath), highlight = root.transform.Find(NativeEntry.ChefPath + "/Highlight");
+                Palette = NativePalette.Capture(button == null ? null : button.GetComponent<T17Button>(),
+                    highlight == null ? null : highlight.GetComponent<Image>(), storage.transform);
                 GameObject copy = UnityEngine.Object.Instantiate(source.gameObject, storage.transform, false);
                 copy.SetActive(false); NativeUi.Strip(copy); NativeTemplateComponents.Rebuild(copy);
                 assets = new NativeTemplateAssets(); assets.Capture(copy); Source = copy.transform;
@@ -36,7 +41,7 @@ namespace OC2ModSettings
         }
         internal static void Dispose()
         {
-            if (storage != null) UnityEngine.Object.Destroy(storage); storage = null; Source = null;
+            if (storage != null) UnityEngine.Object.Destroy(storage); storage = null; Source = null; Palette = null;
             if (assets != null) assets.Dispose(); assets = null;
         }
     }

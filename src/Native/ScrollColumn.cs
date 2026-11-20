@@ -21,7 +21,7 @@ namespace OC2ModSettings
             Scroll.horizontal = false; Scroll.vertical = true; Scroll.inertia = false;
             Scroll.movementType = ScrollRect.MovementType.Clamped; Scroll.scrollSensitivity = 42;
         }
-        internal void AddScrollbar(T17Scrollbar template)
+        internal void AddScrollbar(T17Scrollbar template, Color normal)
         {
             if (template == null) throw new System.InvalidOperationException("Native scrollbar template component missing.");
             GameObject copy = UnityEngine.Object.Instantiate(template.gameObject, Scroll.transform, false);
@@ -29,7 +29,8 @@ namespace OC2ModSettings
             Bar = copy.GetComponent<T17Scrollbar>();
             if (Bar == null || Bar.handleRect == null) throw new System.InvalidOperationException("Native scrollbar clone handle missing; template handle=" + template.handleRect);
             Graphic track = copy.GetComponent<Graphic>();
-            if (track == null) { track = copy.AddComponent<Image>(); track.color = Color.clear; }
+            if (track == null) track = copy.AddComponent<Image>();
+            track.color = normal;
             track.raycastTarget = true;
             foreach (Graphic graphic in Bar.handleRect.GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = true;
             Bar.onValueChanged = new Scrollbar.ScrollEvent();

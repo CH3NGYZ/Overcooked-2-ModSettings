@@ -19,7 +19,7 @@ namespace OC2ModSettings
         private void CreateChoices(RectTransform root)
         {
             choiceColumn = new ScrollColumn(root, "Choices", new Vector2(.04f, .08f), new Vector2(.96f, .86f));
-            choiceColumn.AddScrollbar(page.ScrollbarTemplate); choiceColumn.Bar.SetEventSystem(page.Domain);
+            choiceColumn.AddScrollbar(page.ScrollbarTemplate, page.Palette.Normal); choiceColumn.Bar.SetEventSystem(page.Domain);
         }
         private void PopulateChoices(string[] names, Action<int> selected)
         {

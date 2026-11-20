@@ -15,6 +15,7 @@ namespace OC2ModSettings
         private void RefreshContent()
         {
             if (language != Localization.GetLanguage()) RefreshLanguage();
+            RefreshShortcutKey();
             Catalog.ConsumeDirty();
             List<ModConfig> snapshot = Catalog.Snapshot(); snapshot.Sort(CompareMods);
             if (!contentBuilt || contentDomain != Domain || revision != Catalog.Revision
@@ -56,8 +57,12 @@ namespace OC2ModSettings
             {
                 IEnumerator tabsBuild = BuildTabs(false); while (tabsBuild.MoveNext()) { }
                 BuildSettings(false, false); contentBuilt = true;
-                if (choice != null) foreach (EditorRow editor in editors)
-                    if (ReferenceEquals(editor.Row.Entry, choice.Entry)) { editor.OpenChoices(); Overlay.RestoreChoice(choice); break; }
+                if (choice != null)
+                {
+                    foreach (EditorRow editor in editors)
+                        if (ReferenceEquals(editor.Row.Entry, choice.Entry)) { editor.OpenChoices(); break; }
+                    Overlay.RestoreChoice(choice);
+                }
             }
         }
         private IEnumerator BuildTabs(bool distribute)
@@ -200,7 +205,7 @@ namespace OC2ModSettings
                         if (editors.Count > 0) y += 18;
                         RectTransform header = NativeUi.Rect(Right.Content, "Category", Vector2.zero, Vector2.one);
                         NativeUi.Box(header, 4, y, width - 8, 40);
-                        NativeUi.Backer(header, new Color(.12f, .29f, .40f, .23f)).raycastTarget = false;
+                        NativeUi.Backer(header, Palette.Category).raycastTarget = false;
                         T17Text label = NativeUi.Text(TextTemplate, header, "Label", category, 24);
                         label.alignment = TextAnchor.MiddleCenter; label.color = Color.white;
                         label.resizeTextForBestFit = true; label.resizeTextMinSize = 18; label.resizeTextMaxSize = 24;
@@ -266,20 +271,21 @@ namespace OC2ModSettings
         }
         private void WireNavigation()
         {
-            T17Button current = ActiveTab();
+            T17Button current = ActiveTab() ?? shortcutButton;
             Selectable remembered = RememberedControl();
             for (int i = 0; i < tabs.Count; i++)
             {
                 Navigation n = new Navigation { mode = Navigation.Mode.Explicit };
-                n.selectOnUp = i > 0 ? tabs[i - 1] : null; n.selectOnDown = i + 1 < tabs.Count ? tabs[i + 1] : null;
+                n.selectOnUp = i > 0 ? tabs[i - 1] : shortcutButton; n.selectOnDown = i + 1 < tabs.Count ? tabs[i + 1] : shortcutButton;
                 ModPin pin = tabs[i].GetComponent<ModPin>();
                 n.selectOnRight = pin.Button == null ? remembered : pin.Button; tabs[i].navigation = n;
                 if (pin.Button == null) continue;
                 Navigation pinNav = n; pinNav.selectOnLeft = tabs[i]; pinNav.selectOnRight = remembered;
-                pinNav.selectOnUp = i > 0 ? (Selectable)tabs[i - 1].GetComponent<ModPin>().Button ?? tabs[i - 1] : null;
-                pinNav.selectOnDown = i + 1 < tabs.Count ? (Selectable)tabs[i + 1].GetComponent<ModPin>().Button ?? tabs[i + 1] : null;
+                pinNav.selectOnUp = i > 0 ? (Selectable)tabs[i - 1].GetComponent<ModPin>().Button ?? tabs[i - 1] : shortcutButton;
+                pinNav.selectOnDown = i + 1 < tabs.Count ? (Selectable)tabs[i + 1].GetComponent<ModPin>().Button ?? tabs[i + 1] : shortcutButton;
                 pin.Button.navigation = pinNav;
             }
+            WireShortcut(remembered);
             for (int i = 0; i < rightControls.Count; i++)
             {
                 Selectable control = rightControls[i];
@@ -329,7 +335,7 @@ namespace OC2ModSettings
             ModMemory memory = active == null ? null : PageMemory.For(active.Guid);
             Right.Content.anchoredPosition = new Vector2(0, memory == null ? 0 : Mathf.Clamp(memory.Scroll, 0, Mathf.Max(0, Right.Content.rect.height - Right.Viewport.rect.height)));
             if (preserveSearch) yield break;
-            if (Overlay.IsOpen) yield break;
+            if (Overlay.IsOpen || IsRecordingToggleKey || (!focusRight && Domain != null && Domain.currentSelectedGameObject == shortcutButton.gameObject)) yield break;
             Selectable target = null;
             if (focusRight)
             {
@@ -337,7 +343,7 @@ namespace OC2ModSettings
                 if (target == null && editors.Count > 0) target = editors[0].First;
                 if (target == null && rightControls.Count > 0) target = rightControls[0];
             }
-            if (target == null) target = ActiveTab();
+            if (target == null) target = ActiveTab() ?? shortcutButton;
             if (Domain != null && target != null) Domain.SetSelectedGameObject(target.gameObject);
         }
         private Selectable RememberedControl()
@@ -353,6 +359,6 @@ namespace OC2ModSettings
             return editor.First;
         }
         private T17Button ActiveTab() { int index = active == null ? -1 : mods.IndexOf(active); return index >= 0 && index < tabs.Count ? tabs[index] : null; }
-        private void FocusTab() { onRight = false; T17Button tab = ActiveTab(); if (tab != null && Domain != null) Domain.SetSelectedGameObject(tab.gameObject); }
+        private void FocusTab() { onRight = false; if (Domain != null) Domain.SetSelectedGameObject((ActiveTab() ?? shortcutButton).gameObject); }
     }
 }

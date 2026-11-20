@@ -36,7 +36,8 @@ namespace OC2ModSettings
                 delegate { Close(); selected(shortcut ? (object)new KeyboardShortcut(KeyCode.None) : KeyCode.None); }, page);
             NativeUi.Box(clear.GetComponent<RectTransform>(), 30, 160, 260, 48); clear.SetEventSystem(page.Domain);
             capture = root.gameObject.AddComponent<KeyCapture>();
-            capture.Initialize(page.Domain, shortcut, delegate(object value) { Close(); selected(value); }, page.CaptureCancelled);
+            capture.Initialize(page, shortcut ? KeyCapture.Mode.Combination : KeyCapture.Mode.Single,
+                delegate(object value) { Close(); selected(value); }, page.CaptureCancelled);
             capture.ClearButton = clear;
         }
         private RectTransform Begin(string title)
@@ -69,7 +70,7 @@ namespace OC2ModSettings
             choiceRow = null; choiceItems = null; choiceSelected = null; choiceColumn = null; colorClose = null;
             localizedTitle = null; titleLabel = null;
             if (colorPicker != null) { ColorPicker oldPicker = colorPicker; colorPicker = null; oldPicker.Release(); }
-            if (capture != null) { capture.Release(); capture = null; }
+            if (capture != null) { capture.Stop(); capture = null; }
             GameObject old = panel; panel = null; buttons.Clear();
             if (old != null) { old.SetActive(false); UnityEngine.Object.Destroy(old); }
             if (previous != null && page.Domain != null && previous.activeInHierarchy) page.Domain.SetSelectedGameObject(previous);
@@ -89,62 +90,6 @@ namespace OC2ModSettings
                 if (colorClose != null) NativeUi.Label(colorClose.transform, Texts.Close);
             }
             RefreshChoices();
-        }
-    }
-
-    internal sealed class KeyCapture : MonoBehaviour
-    {
-        private static readonly KeyCode[] Keys = (KeyCode[])Enum.GetValues(typeof(KeyCode));
-        private static readonly KeyCode[] Modifiers = new KeyCode[] { KeyCode.LeftControl, KeyCode.RightControl, KeyCode.LeftShift, KeyCode.RightShift,
-            KeyCode.LeftAlt, KeyCode.RightAlt, KeyCode.LeftCommand, KeyCode.RightCommand };
-        private Suppressor suppressor;
-        private T17EventSystem domain;
-        private bool shortcut;
-        private int startFrame;
-        private Action<object> selected;
-        private Action cancel;
-        private ILogicalButton cancelButton;
-        internal T17Button ClearButton;
-        internal void Initialize(T17EventSystem system, bool isShortcut, Action<object> result, Action cancelled)
-        {
-            domain = system; shortcut = isShortcut; selected = result; cancel = cancelled; startFrame = Time.frameCount;
-            cancelButton = PlayerInputLookup.GetEngagedButton(PlayerInputLookup.LogicalButtonID.UICancel, PlayerInputLookup.Player.One, PadSide.Both);
-            if (domain != null) suppressor = domain.Disable(this);
-        }
-        private void Update()
-        {
-            if (Time.frameCount <= startFrame + 1) return;
-            if (Input.GetKeyDown(KeyCode.BackQuote)) return;
-            if (Input.GetKeyUp(KeyCode.Escape) || (cancelButton != null && cancelButton.JustReleased()))
-            { if (cancelButton != null) { cancelButton.ClaimPressEvent(); cancelButton.ClaimReleaseEvent(); } cancel(); return; }
-            if (Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace)
-                || (Input.GetMouseButtonUp(0) && ClearButton != null && RectTransformUtility.RectangleContainsScreenPoint(
-                    ClearButton.GetComponent<RectTransform>(), Input.mousePosition, EventCamera())))
-            { selected(shortcut ? (object)new KeyboardShortcut(KeyCode.None) : KeyCode.None); return; }
-            foreach (KeyCode key in Keys)
-            {
-                if (key == KeyCode.None || key == KeyCode.Escape || (key >= KeyCode.Mouse0 && key <= KeyCode.Mouse6) || (shortcut && Array.IndexOf(Modifiers, key) >= 0) || !Input.GetKeyDown(key)) continue;
-                List<KeyCode> modifiers = new List<KeyCode>();
-                if (shortcut) foreach (KeyCode modifier in Modifiers) if (Input.GetKey(modifier)) modifiers.Add(modifier);
-                AcceptKey(key, modifiers.ToArray()); return;
-            }
-        }
-        internal void AcceptKey(KeyCode key, KeyCode[] modifiers)
-        {
-            if (!enabled || key == KeyCode.None || key == KeyCode.Escape || key == KeyCode.BackQuote) return;
-            if (shortcut && Array.IndexOf(Modifiers, key) >= 0) return;
-            selected(shortcut ? (object)new KeyboardShortcut(key, modifiers) : key);
-        }
-        internal void Release()
-        { if (suppressor != null) { if (domain != null) domain.ReleaseSuppressor(suppressor); else suppressor.Release(); suppressor = null; } }
-        private void OnDisable() { Release(); }
-        private void OnDestroy() { Release(); }
-        private Camera EventCamera()
-        {
-            Canvas canvas = ClearButton.GetComponentInParent<Canvas>();
-            GraphicRaycaster raycaster = ClearButton.GetComponentInParent<GraphicRaycaster>();
-            return canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null
-                : raycaster != null ? raycaster.eventCamera : canvas.worldCamera;
         }
     }
 }

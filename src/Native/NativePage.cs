@@ -15,6 +15,8 @@ namespace OC2ModSettings
         internal T17Scrollbar ScrollbarTemplate;
         internal ScrollColumn Left, Right;
         internal NativeOverlay Overlay;
+        internal NativeShortcut Shortcut { get; private set; }
+        internal NativePalette Palette { get; private set; }
         internal T17EventSystem Domain { get { return CachedEventSystem; } }
         private List<ModConfig> mods = new List<ModConfig>();
         private readonly List<T17Button> tabs = new List<T17Button>();
@@ -37,11 +39,11 @@ namespace OC2ModSettings
         private bool ownedState;
         private int cancelHandledFrame = -2;
 
-        internal static NativePage Create(GlobalSettingsHost host, ConfigCatalog catalog)
+        internal static NativePage Create(GlobalSettingsHost host, ConfigCatalog catalog, NativeShortcut shortcut)
         {
             Transform source = NativePageTemplate.Source;
             if (source == null) throw new MissingMemberException("Native GameOptions frame unavailable.");
-            T17Button sourceButton = source.Find("SettingsBody/ContentPC/Viewport/Content/ScreenAdjuster").GetComponent<T17Button>();
+            T17Button sourceButton = source.Find(NativePageTemplate.ButtonPath).GetComponent<T17Button>();
             T17Text sourceText = source.Find("SettingsBody/HeaderBacker/Header").GetComponent<T17Text>();
             GameObject go = UnityEngine.Object.Instantiate(source.gameObject, host.Root.transform, false);
             try
@@ -55,7 +57,8 @@ namespace OC2ModSettings
                 // Strip removed FrontendOptionsMenu before activation, including all native save/reset listeners.
                 NativePage page = go.AddComponent<NativePage>();
                 page.host = host; page.m_CachedEventSystem = host.Domain; page.cachedUser = host.Domain.AssignedGamepadUser;
-                page.Catalog = catalog; page.ButtonTemplate = sourceButton; page.TextTemplate = sourceText;
+                page.Catalog = catalog; page.ButtonTemplate = sourceButton; page.TextTemplate = sourceText; page.Shortcut = shortcut;
+                page.Palette = NativePageTemplate.Palette;
                 page.RefreshInputBindings();
                 page.pinned = ModSettingsPlugin.Instance.Pins;
                 page.ScrollbarTemplate = source.Find("SettingsBody/ContentPC/T17Scrollbar").GetComponent<T17Scrollbar>();
@@ -93,7 +96,7 @@ namespace OC2ModSettings
             RectTransform area = NativeUi.Rect(body, "ModSettingsContent", new Vector2(.035f, .18f), new Vector2(.97f, .825f));
             Left = new ScrollColumn(area, "Mods", Vector2.zero, new Vector2(.28f, 1));
             Right = new ScrollColumn(area, "Settings", new Vector2(.30f, 0), Vector2.one);
-            Left.AddScrollbar(ScrollbarTemplate); Right.AddScrollbar(ScrollbarTemplate);
+            Left.AddScrollbar(ScrollbarTemplate, Palette.Normal); Right.AddScrollbar(ScrollbarTemplate, Palette.Normal);
             search = NativeTextInput.Create(this, body, "Search", query, Texts.Search);
             search.Changed = delegate(string value)
             { Remember(); query = value; BuildSettings(false, true); return true; };
@@ -106,6 +109,7 @@ namespace OC2ModSettings
             RectTransform rect = close.GetComponent<RectTransform>(); rect.anchorMin = new Vector2(.885f, .89f); rect.anchorMax = new Vector2(.97f, .89f);
             rect.sizeDelta = new Vector2(0, 46); rect.anchoredPosition = Vector2.zero; close.SetEventSystem(Domain);
             Overlay = new NativeOverlay(this, body);
+            BuildShortcut(body);
         }
         internal void Open()
         {
@@ -130,6 +134,7 @@ namespace OC2ModSettings
             if (Time.frameCount <= cancelHandledFrame + 1) return;
             cancelHandledFrame = Time.frameCount;
             if (Overlay.IsOpen) { Overlay.Close(); return; }
+            if (EndShortcutCapture()) return;
             if (search != null && search.HasPending) { search.Cancel(); return; }
             foreach (EditorRow editor in editors) if (editor.CancelPending()) return;
             if (onRight) { FocusTab(); return; }
@@ -181,6 +186,7 @@ namespace OC2ModSettings
             if (ownedState && !Domain.IsDisabled() && (keyboardCancel || mappedCancel)) Cancel();
             if (!gameObject.activeInHierarchy || rebuilding || Time.realtimeSinceStartup < nextRefresh) return;
             nextRefresh = Time.realtimeSinceStartup + .2f;
+            RefreshShortcutKey();
             foreach (EditorRow editor in editors) editor.RefreshActions();
             if (language != Localization.GetLanguage())
                 RefreshLanguage();
@@ -200,6 +206,7 @@ namespace OC2ModSettings
             language = Localization.GetLanguage(); MenuName = Texts.Title;
             NativeUi.Label(transform.Find("SettingsBody/HeaderBacker/Header"), Texts.Title);
             search.SetPlaceholder(Texts.Search); NativeUi.Label(close.transform, Texts.Close);
+            RefreshShortcutKey();
             if (advancedButton != null) NativeUi.Label(advancedButton.transform, Texts.Advanced + (PageMemory.Advanced ? " ✓" : ""));
             if (defaultsButton != null) NativeUi.Label(defaultsButton.transform, Texts.Defaults);
             if (refreshButton != null) NativeUi.Label(refreshButton.transform, Texts.Refresh);
@@ -246,6 +253,7 @@ namespace OC2ModSettings
         }
         private void CancelEdits(bool preserveSearch)
         {
+            EndShortcutCapture();
             if (Overlay != null) Overlay.Close();
             if (search != null && !preserveSearch) search.Cancel();
             foreach (EditorRow editor in editors) editor.CancelPending();

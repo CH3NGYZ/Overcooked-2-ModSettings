@@ -54,7 +54,9 @@ namespace OC2ModSettings
             litControl = control; litRow = control == null ? row : null;
             if (litControl != null) litControl.Paint(true);
             if (litRow != null) litRow.Paint(true);
-            if (help != null) ShowHelp(row == null ? null : row.Row.Metadata.Description);
+            if (help != null) ShowHelp(IsRecordingToggleKey
+                ? Texts.PressKey + "   ·   Esc: " + Texts.Cancel
+                : row == null ? null : row.Row.Metadata.Description);
         }
     }
 }

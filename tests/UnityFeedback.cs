@@ -26,11 +26,22 @@ public sealed partial class ModSettingsUnityTests
     }
     private IEnumerator VerifyFeedback(NativePage page)
     {
-        Color normal = new Color32(90, 150, 190, 255), rowNormal = new Color32(118, 173, 209, 255), highlight = new Color32(255, 163, 57, 255);
+        Color normal = themeFixture ? FixtureNormal : new Color32(90, 150, 190, 255);
+        Color highlight = themeFixture ? FixtureHighlight : new Color32(255, 157, 62, 255);
+        Color rowNormal = page.Palette.Row;
+        File.WriteAllText(Path.Combine(output, "palette.txt"), "Normal=#" + ColorUtility.ToHtmlStringRGB(page.Palette.Normal)
+            + "\nHighlight=#" + ColorUtility.ToHtmlStringRGB(page.Palette.Highlight) + "\nFixture=" + themeInjected);
+        Check(!themeFixture || themeInjected, "recolored textures were installed in the live test process before template capture");
+        Check(SameColor(page.Palette.Normal, normal) && SameColor(page.Palette.Highlight, highlight),
+            "cached colors match the independent expectations of the native button's two sprite states");
+        NativeTextInput search = page.transform.Find("SettingsBody/Search").GetComponent<NativeTextInput>();
+        Check(SameColor(search.targetGraphic.color, normal) && SameColor(page.Right.Bar.GetComponent<Image>().color, normal),
+            "search and scrollbar track use the native normal color");
         T17Text help = page.transform.Find("SettingsBody/Explanation/Help").GetComponent<T17Text>();
         foreach (Transform child in page.Right.Content)
             if (child.name == "Category")
-                Check(SameColor(child.Find("Label").GetComponent<T17Text>().color, Color.white),
+                Check(SameColor(child.GetComponent<Image>().color, page.Palette.Category)
+                    && SameColor(child.Find("Label").GetComponent<T17Text>().color, Color.white),
                     "category heading uses the same game white as setting titles");
         foreach (SettingsRowFeedback candidate in page.Right.Content.GetComponentsInChildren<SettingsRowFeedback>())
             Check(candidate.transform.Find("Name").GetComponentInChildren<T17Text>().color == Color.white,
@@ -59,7 +70,6 @@ public sealed partial class ModSettingsUnityTests
         page.KeyboardFeedback(); page.Domain.SetSelectedGameObject(text.gameObject); yield return null; yield return null;
         Check(SameColor(text.targetGraphic.color, highlight) && help.text == fixture["Types", "string"].Description.Description,
             "native selection highlights input and shows Description without a mouse");
-        NativeTextInput search = page.transform.Find("SettingsBody/Search").GetComponent<NativeTextInput>();
         HoverSettings(page, search.GetComponent<RectTransform>(), new Vector2(.5f, .5f));
         Check(SameColor(search.targetGraphic.color, highlight) && SameColor(text.targetGraphic.color, normal) && help.text == "",
             "search uses the shared theme and clears unrelated Description without the removed hint");
@@ -71,7 +81,7 @@ public sealed partial class ModSettingsUnityTests
             && help.text == fixture["Types", "range"].Description.Description, "slider highlights its rail without highlighting the enclosing row");
         Graphic handle = slider.handleRect.GetComponent<Graphic>();
         Check(SameColor(handle.color, Color.white) && SameColor(handle.canvasRenderer.GetColor(), Color.white),
-            "focused slider retains a white handle and renderer tint over its orange rail");
+            "focused slider retains a white handle and renderer tint over the themed rail");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "feedback-slider.png")); yield return new WaitForEndOfFrame(); yield return null;
         RectTransform choice = page.Right.Content.Find("Setting_Types_choice") as RectTransform;
         page.Right.Reveal(choice); yield return null; yield return null;

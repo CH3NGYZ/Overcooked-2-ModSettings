@@ -63,7 +63,7 @@ public sealed partial class ModSettingsUnityTests
             && rebind.GetComponentInChildren<T17Text>().text == Texts.PressKey,
             "inline rebind changes label to press key and exclusively captures input without a secondary dialog");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "keycode-capture.png")); yield return new WaitForEndOfFrame(); yield return null;
-        capture.AcceptKey(KeyCode.BackQuote, new KeyCode[0]);
+        capture.AcceptKey(Shortcut.Key, new KeyCode[0]);
         Check((KeyCode)fixture["Types", "enum"].BoxedValue == KeyCode.F8 && capture.enabled,
             "reserved global-toggle key cannot be accidentally assigned by inline capture");
         capture.AcceptKey(KeyCode.K, new KeyCode[] { KeyCode.LeftControl }); yield return null; yield return null;

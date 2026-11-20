@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using BepInEx.Configuration;
 using HarmonyLib;
 using OC2ModSettings;
@@ -14,15 +16,19 @@ public sealed partial class ModSettingsUnityTests
     private static bool OverrideLanguage(ref SupportedLanguages __result) { __result = testLanguage; return false; }
     private static bool SkipConsumerPolling() { return false; }
     private static string Caption(Transform target) { return target.GetComponentInChildren<T17Text>(true).text; }
+    private void IsolateLanguagePoll(List<MethodInfo> isolated, string typeName, string methodName)
+    {
+        Type consumer = AccessTools.TypeByName(typeName);
+        MethodInfo poll = consumer == null ? null : AccessTools.Method(consumer, methodName, Type.EmptyTypes);
+        if (poll == null) return;
+        harmony.Patch(poll, new HarmonyMethod(typeof(ModSettingsUnityTests), "SkipConsumerPolling"));
+        isolated.Add(poll);
+    }
     private IEnumerator VerifyLocalization(NativePage page, T17Button entryButton)
     {
         testLanguage = Localization.GetLanguage();
-        // Isolate public chrome updates from this installed consumer's intentional full-catalog
-        // Refresh on every game language change. Explicit consumer Refresh is exercised below.
-        Type pollingType = AccessTools.TypeByName("OC2HudCustomization.SettingsLanguageSync");
-        System.Reflection.MethodInfo polling = pollingType == null ? null : AccessTools.Method(pollingType, "Poll");
-        if (polling != null) harmony.Patch(polling, new HarmonyMethod(typeof(ModSettingsUnityTests), "SkipConsumerPolling"));
-        harmony.Patch(AccessTools.Method(typeof(Localization), "GetLanguage"), new HarmonyMethod(typeof(ModSettingsUnityTests), "OverrideLanguage"));
+        List<MethodInfo> isolated = new List<MethodInfo>();
+        MethodInfo readLanguage = AccessTools.Method(typeof(Localization), "GetLanguage");
         ConfigFile file = new ConfigFile(Path.Combine(output, "localization.cfg"), false); file.SaveOnConfigSet = false;
         ConfigEntry<string> language = file.Bind("Language", "Language", "en", new ConfigDescription("MOD language", new AcceptableValueList<string>("en", "zh")));
         ModSettingsAttributes roleDisplay = new ModSettingsAttributes { DispName = "Role", Category = "General", Order = 20, CategoryOrder = 100 };
@@ -49,6 +55,11 @@ public sealed partial class ModSettingsUnityTests
         language.SettingChanged += changed;
         try
         {
+            // Test in-place public labels separately from installed consumers' intentional
+            // catalog rebuilds. The fixture's explicit SDK Refresh still runs below.
+            IsolateLanguagePoll(isolated, "OC2HudCustomization.SettingsLanguageSync", "Poll");
+            IsolateLanguagePoll(isolated, "HostUtilities.Language", "Update");
+            harmony.Patch(readLanguage, new HarmonyMethod(typeof(ModSettingsUnityTests), "OverrideLanguage"));
             yield return new WaitForSecondsRealtime(.4f);
             Submit(page.Left.Content.Find("Mod_fixture.localization"), page); yield return new WaitForSecondsRealtime(.4f);
             NativeTextInput search = page.transform.Find("SettingsBody/Search").GetComponent<NativeTextInput>();
@@ -56,12 +67,15 @@ public sealed partial class ModSettingsUnityTests
             page.Domain.SetSelectedGameObject(numeric.gameObject); yield return null; yield return null;
             numeric.Begin(); numeric.ChangeText("-"); int caret = numeric.Caret;
             byte[] before = File.ReadAllBytes(file.ConfigFilePath);
+            Transform footer = page.transform.Find("SettingsBody/ToggleShortcut");
+            string currentKey = ValueCodec.Format(Shortcut.Setting, Shortcut.Key);
             foreach (SupportedLanguages current in Enum.GetValues(typeof(SupportedLanguages)))
             {
                 testLanguage = current; yield return new WaitForSecondsRealtime(.6f); yield return null;
                 Check(Caption(entryButton.transform) == Texts.Title, "native entry follows " + current);
                 Check(Caption(page.transform.Find("SettingsBody/HeaderBacker/Header")) == Texts.Title && page.MenuName == Texts.Title, "cached banner follows " + current);
                 Check(Caption(page.transform.Find("SettingsBody/CloseModSettings")) == Texts.Close && Caption(search.transform) == Texts.Search, "cached close/search follow " + current);
+                Check(Caption(footer) == currentKey, "idle shortcut shows only the key in " + current);
                 T17Button[] toolbar = page.Right.Content.GetComponentsInChildren<T17Button>();
                 Check(Caption(toolbar[0].transform).StartsWith(Texts.Advanced) && Caption(toolbar[1].transform) == Texts.Defaults
                     && Caption(toolbar[2].transform) == Texts.Refresh, "toolbar follows " + current);
@@ -85,6 +99,13 @@ public sealed partial class ModSettingsUnityTests
             }
             numeric.Cancel();
             Check(Convert.ToBase64String(before) == Convert.ToBase64String(File.ReadAllBytes(file.ConfigFilePath)), "all game language changes leave config file untouched");
+            Submit(footer, page); yield return null; yield return null;
+            Check(page.IsRecordingToggleKey && Caption(footer) == Texts.PressKey, "listening prompt uses the current game language");
+            testLanguage = SupportedLanguages.French; yield return new WaitForSecondsRealtime(.4f); yield return null;
+            Check(page.IsRecordingToggleKey && page.Domain.IsDisabled() && Caption(footer) == Texts.PressKey
+                && Caption(page.transform.Find("SettingsBody/Explanation")).Contains(Texts.Cancel), "game language refresh translates the active shortcut prompt without cancelling it");
+            ScreenCapture.CaptureScreenshot(Path.Combine(output, "shortcut-recording-french.png")); yield return new WaitForEndOfFrame(); yield return null;
+            page.Cancel(); yield return null; yield return null;
             testLanguage = SupportedLanguages.English; yield return new WaitForSecondsRealtime(.4f);
             Submit(page.Right.Content.Find("Setting_Language_Language/Dropdown"), page); yield return null; yield return null;
             Submit(page.Overlay.Root.Find("Dialog/Choices/Viewport/Content/Choice_1"), page);
@@ -167,8 +188,8 @@ public sealed partial class ModSettingsUnityTests
         finally
         {
             page.Overlay.Close(); language.SettingChanged -= changed; action.Dispose(); registered.Dispose();
-            harmony.Unpatch(AccessTools.Method(typeof(Localization), "GetLanguage"), HarmonyPatchType.Prefix, harmony.Id);
-            if (polling != null) harmony.Unpatch(polling, HarmonyPatchType.Prefix, harmony.Id);
+            harmony.Unpatch(readLanguage, HarmonyPatchType.Prefix, harmony.Id);
+            foreach (MethodInfo poll in isolated) harmony.Unpatch(poll, HarmonyPatchType.Prefix, harmony.Id);
         }
     }
 }

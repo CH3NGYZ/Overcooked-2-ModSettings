@@ -32,8 +32,8 @@ public sealed partial class ModSettingsUnityTests
                 && page.gameObject.scene.name == "DontDestroyOnLoad", "page belongs to independent DDOL host");
             Check(Cursor.visible && Cursor.lockState == CursorLockMode.None, "global page exposes unlocked cursor");
             yield return new WaitForSecondsRealtime(.4f);
-            CheckRaycast(page.Left.Content.GetComponentInChildren<T17Button>(), page.Domain,
-                "global controls receive canvas raycasts without native root");
+            IEnumerator raycast = VerifyVisibleTabRaycast(page, "global controls receive canvas raycasts without native root");
+            while (raycast.MoveNext()) yield return raycast.Current;
             GraphicRaycaster raycaster = page.GetComponentInParent<GraphicRaycaster>();
             PointerEventData pointer = new PointerEventData(page.Domain) { position = new Vector2(1, 1) };
             List<RaycastResult> hits = new List<RaycastResult>(); page.Domain.RaycastAll(pointer, hits);
@@ -62,8 +62,8 @@ public sealed partial class ModSettingsUnityTests
             Check(Shortcut.ActivePage == page && dialog.IsActive && !page.Domain.IsDisabled(),
                 "global shortcut opens above active native dialog without dismissing it");
             CheckGlobalCanvases(page, "native dialog");
-            CheckRaycast(page.Left.Content.GetComponentInChildren<T17Button>(), page.Domain,
-                "settings raycasts outrank actual native dialog and spinner");
+            IEnumerator raycast = VerifyVisibleTabRaycast(page, "settings raycasts outrank actual native dialog and spinner");
+            while (raycast.MoveNext()) yield return raycast.Current;
             Submit(page.Left.Content.Find("Mod_fixture.00"), page); yield return null; yield return null; yield return null;
             Transform toggle = page.Right.Content.Find("Setting_Types_boolean/Toggle");
             object before = fixture["Types", "boolean"].BoxedValue;
@@ -80,6 +80,23 @@ public sealed partial class ModSettingsUnityTests
             dialog.Hide();
         }
         yield return null; yield return null;
+    }
+    private IEnumerator VerifyVisibleTabRaycast(NativePage page, string label)
+    {
+        T17Button tab = page.Left.Content.GetChild(0).GetComponent<T17Button>();
+        RectTransform rect = (RectTransform)tab.transform;
+        Vector2 point = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center));
+        bool visible = RectTransformUtility.RectangleContainsScreenPoint(page.Left.Viewport, point);
+        File.AppendAllText(Path.Combine(output, "raycasts.txt"), label + " (before reveal): " + tab.gameObject.name
+            + " screen=" + point + " viewport=" + page.Left.Viewport.rect + " visible=" + visible
+            + " offset=" + page.Left.Content.anchoredPosition.y + Environment.NewLine);
+        // The cached list can reopen at a nonzero offset. Probe a hittable point, not a clipped tab.
+        if (!visible)
+        {
+            page.Left.Reveal(rect);
+            yield return null; yield return null;
+        }
+        CheckRaycast(tab, page.Domain, label);
     }
     private void CheckGlobalCanvases(NativePage page, string context)
     {

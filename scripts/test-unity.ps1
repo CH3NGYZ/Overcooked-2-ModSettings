@@ -1,6 +1,6 @@
 param([string]$GameRoot='E:\SteamLibrary\steamapps\common\Overcooked! 2',[switch]$WithoutFastInit,
     [string[]]$EmbeddedAssemblies=@(),[string]$SelectedAssembly='', [string]$ExpectedVersion='',
-    [int]$FixtureCount=30,[switch]$NoStandalone,[switch]$WithGameplay,[switch]$ShortcutOnly,[switch]$OpeningPerformance,[switch]$TextEditingOnly,[switch]$LocalizationOnly)
+    [int]$FixtureCount=30,[switch]$NoStandalone,[switch]$WithGameplay,[switch]$ShortcutOnly,[switch]$OpeningPerformance,[switch]$TextEditingOnly,[switch]$LocalizationOnly,[switch]$ThemeFixture)
 $ErrorActionPreference='Stop'
 if(Get-Process -Name Overcooked2 -ErrorAction SilentlyContinue){throw 'A player game is running; no test deployment performed.'}
 & (Join-Path $PSScriptRoot 'build.ps1') -GameRoot $GameRoot
@@ -37,6 +37,7 @@ try{
     if($OpeningPerformance){$arguments+='-modSettingsOpeningPerformance'}
     if($TextEditingOnly){$arguments+='-modSettingsTextEditingOnly'}
     if($LocalizationOnly){$arguments+='-modSettingsLocalizationOnly'}
+    if($ThemeFixture){$arguments+='-modSettingsThemeFixture'}
     Start-Process -FilePath $steam -ArgumentList $arguments -WindowStyle Hidden | Out-Null
     Write-Output "Unity run: $run"
     $deadline=(Get-Date).AddSeconds(220); $seen=$false

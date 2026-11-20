@@ -53,6 +53,7 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         harmony.Patch(AccessTools.Method(typeof(PCSaveManager), "GetFileAddress"), null, new HarmonyMethod(typeof(ModSettingsUnityTests), "Redirect"));
         Type diy = AccessTools.TypeByName("OC2DIYLevel.DIYLevelSaveManager");
         if (diy != null) harmony.Patch(AccessTools.Method(diy, "GetFileAddress"), null, new HarmonyMethod(typeof(ModSettingsUnityTests), "Redirect"));
+        InstallThemeFixture();
         StartCoroutine(Protected());
     }
     private static void Redirect(ref string __result)
@@ -199,6 +200,11 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         CheckRaycast(page.Right.Content.Find("Setting_Types_boolean/Toggle").GetComponent<T17Button>(), page.Domain, "setting toggle is topmost selectable");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "settings-" + fixtureCount + "-mods.png"));
         WriteGeometry(page);
+        if (themeFixture)
+        {
+            IEnumerator themed = VerifyFeedback(page); while (themed.MoveNext()) yield return themed.Current;
+            File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: " + assertions + " actual Unity recolored theme assertions"); yield break;
+        }
         if (Array.IndexOf(Environment.GetCommandLineArgs(), "-modSettingsLocalizationOnly") >= 0)
         {
             IEnumerator localized = VerifyLocalization(page, button); while (localized.MoveNext()) yield return localized.Current;
@@ -213,6 +219,7 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         }
         VerifyLayout(page);
         yield return new WaitForEndOfFrame();
+        IEnumerator capture = VerifyShortcutCapture(page); while (capture.MoveNext()) yield return capture.Current;
         IEnumerator clipping = VerifyTextClipping(page); while (clipping.MoveNext()) yield return clipping.Current;
         IEnumerator feedback = VerifyFeedback(page); while (feedback.MoveNext()) yield return feedback.Current;
         IEnumerator responsive = VerifyResponsiveRows(page); while (responsive.MoveNext()) yield return responsive.Current;
@@ -232,6 +239,11 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         for (int i = 0; i < 3; i++)
         {
             page.Hide(true, false); yield return null;
+            // The business-dialog and global shortcut cases can leave another native item
+            // selected. A scripted submit alone does not give its recipient native focus.
+            File.AppendAllText(Path.Combine(output, "entry-focus.txt"), "\nbefore repeat " + i + ": " + root.CachedEventSystem.currentSelectedGameObject);
+            button.Select(); yield return null; yield return null;
+            Check(root.CachedEventSystem.currentSelectedGameObject == button.gameObject, "chef entrance is focused before native submit " + i);
             ExecuteEvents.Execute(button.gameObject, new BaseEventData(root.CachedEventSystem), ExecuteEvents.submitHandler);
             yield return new WaitForSecondsRealtime(.35f);
             Check(page.gameObject.activeInHierarchy && Resources.FindObjectsOfTypeAll<NativePage>().Length == 1, "repeated open unique page " + i);

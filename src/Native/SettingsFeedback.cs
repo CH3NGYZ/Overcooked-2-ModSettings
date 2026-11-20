@@ -7,9 +7,6 @@ namespace OC2ModSettings
     // The page chooses one feedback target, so row and child highlights cannot overlap.
     internal sealed class SettingsControlFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler, IMoveHandler
     {
-        internal static readonly Color RowNormal = new Color32(118, 173, 209, 255);
-        internal static readonly Color Normal = new Color32(90, 150, 190, 255);
-        internal static readonly Color Highlight = new Color32(255, 163, 57, 255);
         internal NativePage Page;
         private Selectable control;
         private Graphic backer, indicator;
@@ -23,7 +20,7 @@ namespace OC2ModSettings
         internal void Paint(bool active)
         {
             lit = active;
-            Color color = active && control.IsInteractable() ? Highlight : Normal;
+            Color color = active && control.IsInteractable() ? Page.Palette.Highlight : Page.Palette.Normal;
             if (!control.IsInteractable()) color.a = .45f;
             // A cloned Selectable may still have a native tint tween running on its Graphic.
             // Setting transition=None and the current tint alone does not stop that coroutine.
@@ -52,7 +49,7 @@ namespace OC2ModSettings
         internal void Initialize(NativePage page, SettingRow row)
         { Page = page; Row = row; backer = GetComponent<Image>(); backer.raycastTarget = true; Paint(false); }
         internal void Paint(bool active)
-        { backer.color = active ? SettingsControlFeedback.Highlight : SettingsControlFeedback.RowNormal; }
+        { backer.color = active ? Page.Palette.Highlight : Page.Palette.Row; }
         public void OnPointerEnter(PointerEventData data) { Page.PointerFeedback(data, gameObject); }
         public void OnPointerExit(PointerEventData data) { Page.PointerFeedback(data, null); }
         private void OnDisable() { if (Page != null) Page.ForgetFeedback(this); }

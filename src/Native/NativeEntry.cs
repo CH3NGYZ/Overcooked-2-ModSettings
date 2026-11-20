@@ -6,6 +6,7 @@ namespace OC2ModSettings
 {
     internal sealed class NativeEntry : IDisposable
     {
+        internal const string ChefPath = "WorldSpaceCanvas/Safezone_Rootmenu/RootTab/CustomizationOptions/CustomChef";
         private readonly ModSettingsPlugin plugin;
         private FrontendRootMenu root;
         private T17Button anchor, button;
@@ -37,8 +38,7 @@ namespace OC2ModSettings
         {
             NativePageTemplate.Capture(root);
             if (button != null) return;
-            Transform tab = root.transform.Find("WorldSpaceCanvas/Safezone_Rootmenu/RootTab/CustomizationOptions");
-            Transform source = tab == null ? null : tab.Find("CustomChef");
+            Transform source = root.transform.Find(ChefPath);
             if (source == null) throw new MissingMemberException("CustomizationOptions/CustomChef");
             anchor = source.GetComponent<T17Button>();
             panel = source.parent as RectTransform;
