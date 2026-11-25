@@ -8,6 +8,8 @@ namespace OC2ModSettings
     internal sealed class SettingsControlFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler, IMoveHandler
     {
         internal NativePage Page;
+        internal SettingRow ShortcutRow;
+        internal RegisteredAction Action;
         private Selectable control;
         private Graphic backer, indicator;
         private bool lit;
@@ -35,7 +37,7 @@ namespace OC2ModSettings
         internal void RefreshState() { Paint(lit); }
         public void OnPointerEnter(PointerEventData data) { Page.PointerFeedback(data, gameObject); }
         public void OnPointerExit(PointerEventData data) { Page.PointerFeedback(data, null); }
-        public void OnSelect(BaseEventData data) { Page.RefreshFeedback(); }
+        public void OnSelect(BaseEventData data) { Page.ControlSelected(this); }
         public void OnDeselect(BaseEventData data) { Page.RefreshFeedback(); }
         public void OnMove(AxisEventData data) { Page.KeyboardFeedback(); }
         private void OnDisable() { if (Page != null) Page.ForgetFeedback(this); }

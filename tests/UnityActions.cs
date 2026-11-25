@@ -2,11 +2,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using BepInEx.Configuration;
 using HarmonyLib;
 using OC2ModSettings;
+using OC2ModSettings.SDK;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -19,25 +19,35 @@ public sealed partial class ModSettingsUnityTests
     {
         int calls = 0, attachedCalls = 0, thread = Thread.CurrentThread.ManagedThreadId;
         bool enabled = false, onMain = false;
-        Dictionary<string, object> descriptor = ActionDescriptor("检查更新", delegate { calls++; onMain = Thread.CurrentThread.ManagedThreadId == thread; });
+        ModSettingsClient client = new ModSettingsClient();
+        Check(client.Connect() && client.SupportsActions, "SDK finds the elected service and its existing v1 action method");
+        Dictionary<string, object> descriptor = ActionDescriptor("进入视角编辑模式", delegate { calls++; onMain = Thread.CurrentThread.ManagedThreadId == thread; });
+        descriptor["ButtonLabel"] = "进入视角\n编辑模式";
         descriptor["CanExecute"] = new Func<bool>(delegate { return enabled; });
-        object selectedService = BepInEx.Bootstrap.Chainloader.PluginInfos[ModSettingsPlugin.Guid].Instance;
-        MethodInfo registerAction = selectedService.GetType().GetMethod("RegisterActionV1", BindingFlags.Instance | BindingFlags.Public);
-        Check(registerAction != null && registerAction.ReturnType == typeof(IDisposable), "selected public service exposes the optional shared-type action contract");
-        IDisposable standalone = (IDisposable)registerAction.Invoke(selectedService, new object[] { "fixture.00", "update", descriptor });
-        Dictionary<string, object> attachedDescriptor = ActionDescriptor("改名网页", delegate { attachedCalls++; });
-        attachedDescriptor["Entry"] = fixture["Types", "string"];
-        IDisposable attached = ModSettingsPlugin.Instance.RegisterActionV1("fixture.00", "rename", attachedDescriptor);
+        IDisposable standalone = client.Action("fixture.00", "update", descriptor);
+        ConfigEntryBase nameEntry = fixture["Types", "string"];
+        IDisposable title = client.Configure(nameEntry, new Dictionary<string, object> { { "DispName", "玩家名称" } });
+        ModSettingsAction attachedDescriptor = new ModSettingsAction("改名网页", delegate { attachedCalls++; }) {
+            Entry = nameEntry, ButtonLabel = "打开\n网页"
+        };
+        IDisposable attached = client.RegisterAction("fixture.00", "rename", attachedDescriptor);
         descriptor["DisplayName"] = "mutated caller dictionary";
+        attachedDescriptor.ButtonLabel = "访问网页";
         yield return new WaitForSecondsRealtime(.35f);
         Transform row = page.Right.Content.Find("Setting_@Action_update");
         T17Button action = row.Find("Action_update").GetComponent<T17Button>();
-        Check(action.GetComponentInChildren<T17Text>().text == "检查更新" && !action.interactable && row.Find("Default") == null,
-            "standalone action copies descriptor and starts disabled without a default button");
+        T17Text standaloneTitle = row.Find("Name/Text").GetComponent<T17Text>();
+        T17Text standaloneCaption = action.GetComponentInChildren<T17Text>();
+        Check(standaloneTitle.text == "进入视角编辑模式" && standaloneCaption.text == "进入视角\n编辑模式"
+            && !action.interactable && row.Find("Default") == null,
+            "raw v1 camera-style action keeps its title separate from its caption and starts disabled without a default button");
         enabled = true; yield return new WaitForSecondsRealtime(.3f);
         Check(action.interactable, "CanExecute changes refresh on main thread without a config notification");
         page.Right.Reveal(row as RectTransform); yield return null; yield return null;
         CheckRaycast(action, page.Domain, "standalone business button receives real canvas raycasts");
+        MeasureActionLabel(standaloneTitle, 1, "standalone title");
+        MeasureActionLabel(standaloneCaption, 2, "standalone caption");
+        ScreenCapture.CaptureScreenshot(Path.Combine(output, "standalone-business-action.png")); yield return new WaitForEndOfFrame(); yield return null;
         Submit(action.transform, page);
         Check(calls == 1 && onMain && page.gameObject.activeInHierarchy, "standalone action invokes existing delegate on main thread");
         RectTransform textRow = page.Right.Content.Find("Setting_Types_string") as RectTransform;
@@ -45,6 +55,10 @@ public sealed partial class ModSettingsUnityTests
         Enter(input, "name with action"); Submit(textRow.Find("Action_rename"), page);
         Check(attachedCalls == 1 && (string)fixture["Types", "string"].BoxedValue == "name with action",
             "attached action retains shared native input and owning ConfigFile commit behavior");
+        T17Text configTitle = textRow.Find("Name/Text").GetComponent<T17Text>();
+        T17Text attachedCaption = textRow.Find("Action_rename").GetComponentInChildren<T17Text>();
+        Check(configTitle.text == "玩家名称" && attachedCaption.text == "打开\n网页",
+            "typed attached action snapshots its caption separately from the localized config title");
         Rect field = BoundsIn(input.GetComponent<RectTransform>(), textRow), button = BoundsIn(textRow.Find("Action_rename") as RectTransform, textRow);
         Rect reset = BoundsIn(textRow.Find("Default") as RectTransform, textRow);
         float gap = textRow.rect.width * .74f * .02f;
@@ -56,14 +70,28 @@ public sealed partial class ModSettingsUnityTests
             "attached action navigation follows input, action and default in their visible order");
         page.Right.Reveal(textRow); yield return null; yield return null;
         CheckRaycast(textRow.Find("Action_rename").GetComponent<T17Button>(), page.Domain, "attached business button receives real canvas raycasts");
+        MeasureActionLabel(configTitle, 1, "config title");
+        MeasureActionLabel(attachedCaption, 2, "attached caption");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "attached-business-action.png")); yield return new WaitForEndOfFrame(); yield return null;
         File.AppendAllText(Path.Combine(output, "action-geometry.txt"), "row=" + textRow.rect + " input=" + field + " action=" + button + " default=" + reset + "\n");
         NativeTextInput search = page.transform.Find("SettingsBody/Search").GetComponent<NativeTextInput>();
         Enter(search, "改名网页"); yield return null;
         Check(page.Right.Content.Find("Setting_Types_string") != null && page.Right.Content.Find("Setting_@Action_update") == null,
-            "attached action text is searchable without replacing the setting row");
+            "attached action name is searchable without replacing the setting row");
+        Enter(search, "玩家名称"); yield return null;
+        Check(page.Right.Content.Find("Setting_Types_string") != null, "localized config title is independently searchable");
         Enter(search, ""); yield return null;
         byte[] before = File.ReadAllBytes(fixture.ConfigFilePath);
+        IDisposable nextAttached = client.RegisterAction("fixture.00", "rename", attachedDescriptor);
+        attached.Dispose(); attached = nextAttached;
+        yield return new WaitForSecondsRealtime(.35f);
+        textRow = page.Right.Content.Find("Setting_Types_string") as RectTransform;
+        Check(textRow.Find("Name/Text").GetComponent<T17Text>().text == "玩家名称"
+            && textRow.Find("Action_rename").GetComponentInChildren<T17Text>().text == "访问网页",
+            "same-ID typed registration updates only the caption and survives disposal of the old lease");
+        Check(nameEntry.Definition.Section == "Types" && nameEntry.Definition.Key == "string"
+            && Convert.ToBase64String(before) == Convert.ToBase64String(File.ReadAllBytes(fixture.ConfigFilePath)),
+            "caption changes do not rename the config key or write its file");
         Submit(page.Right.Content.Find("Setting_@Action_update/Action_update"), page);
         Check(Convert.ToBase64String(before) == Convert.ToBase64String(File.ReadAllBytes(fixture.ConfigFilePath)), "executing business action does not save configuration");
         int beforeDefaults = calls;
@@ -71,10 +99,14 @@ public sealed partial class ModSettingsUnityTests
         Submit(page.Overlay.Root.Find("Dialog/Choices/Viewport/Content/Choice_0"), page); yield return null;
         Check(calls == beforeDefaults && attachedCalls == 1, "restore defaults never executes standalone or attached callbacks");
         T17Button stale = page.Right.Content.Find("Setting_@Action_update/Action_update").GetComponent<T17Button>();
-        IDisposable replacement = ModSettingsPlugin.Instance.RegisterActionV1("fixture.00", "update", ActionDescriptor("Replacement", delegate { calls += 10; }));
+        IDisposable replacement = client.Action("fixture.00", "update", ActionDescriptor("Replacement", delegate { calls += 10; }));
         standalone.Dispose(); stale.onClick.Invoke();
         Check(calls == beforeDefaults, "stale action cannot execute after same-ID replacement");
         yield return new WaitForSecondsRealtime(.35f);
+        row = page.Right.Content.Find("Setting_@Action_update");
+        Check(row.Find("Name/Text").GetComponent<T17Text>().text == "Replacement"
+            && row.Find("Action_update").GetComponentInChildren<T17Text>().text == "Replacement",
+            "old title-only dictionary renders both the title and the button");
         Submit(page.Right.Content.Find("Setting_@Action_update/Action_update"), page);
         Check(calls == beforeDefaults + 10, "stale lease release preserves successor action");
         replacement.Dispose(); replacement.Dispose(); yield return new WaitForSecondsRealtime(.35f);
@@ -103,7 +135,7 @@ public sealed partial class ModSettingsUnityTests
             Check(bounds.width > 100 && bounds.xMin >= textRow.rect.xMin && bounds.xMax <= textRow.rect.xMax + 1
                 && bounds.yMin >= textRow.rect.yMin - 1, "wrapped attached action retains usable in-row bounds: " + candidate.name);
         }
-        longName.Dispose(); foreach (IDisposable extra in extras) extra.Dispose(); attached.Dispose();
+        longName.Dispose(); title.Dispose(); foreach (IDisposable extra in extras) extra.Dispose(); attached.Dispose();
         IDictionary<string, object> customHost = null;
         IDisposable renderer = ModSettingsPlugin.Instance.RegisterRendererV1(fixture["Types", "boolean"], new Dictionary<string, object> {
             { "Version", 1 }, { "Create", new Func<RectTransform, ConfigEntryBase, IDictionary<string, object>, IDisposable>(
@@ -171,5 +203,16 @@ public sealed partial class ModSettingsUnityTests
             "CanExecute exception disables only its action instead of breaking the page refresh");
         predicateLease.Dispose(); yield return new WaitForSecondsRealtime(.35f);
         page.Right.Content.anchoredPosition = Vector2.zero;
+    }
+
+    private void MeasureActionLabel(T17Text label, int lines, string role)
+    {
+        Rect rect = label.rectTransform.rect;
+        TextGenerator glyphs = label.cachedTextGenerator;
+        bool rendered = glyphs.Populate(label.text, label.GetGenerationSettings(rect.size));
+        File.AppendAllText(Path.Combine(output, "action-geometry.txt"), role + "\t" + label.text.Replace('\n', '/')
+            + "\t" + rect.width + "x" + rect.height + " UI\tlines=" + glyphs.lineCount + "\n");
+        Check(label.isActiveAndEnabled && rendered && glyphs.lineCount == lines
+            && glyphs.characterCountVisible >= label.text.Replace("\n", "").Length, role + " renders fully on " + lines + " line(s)");
     }
 }

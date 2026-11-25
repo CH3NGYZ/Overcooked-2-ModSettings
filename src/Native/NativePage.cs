@@ -172,7 +172,8 @@ namespace OC2ModSettings
             if (!ownedState) return; ownedState = false;
             StopContentBuild();
             hoveredPin = null;
-            hoveredRow = null; hoveredControl = null;
+            hoveredRow = null; hoveredControl = null; hoveredWarning = null;
+            ClearFeedbackError();
             if (litRow != null) litRow.Paint(false);
             if (litControl != null) litControl.Paint(false);
             litRow = null; litControl = null;
@@ -190,22 +191,32 @@ namespace OC2ModSettings
             nextRefresh = Time.realtimeSinceStartup + .2f;
             RefreshShortcutKey();
             foreach (EditorRow editor in editors) editor.RefreshActions();
-            if (language != Localization.GetLanguage())
-                RefreshLanguage();
+            bool languageChanged = RefreshLanguage();
             if (pinRevision != pinned.Revision) ReorderPinnedTabs();
+            bool shortcutsChanged = false;
             if (Catalog.ConsumeDirty())
             {
                 // Value notifications refresh in place; explicit Refresh or structural changes rebuild below.
                 List<ModConfig> snapshot = Catalog.Snapshot();
                 snapshot.Sort(CompareMods);
                 if (revision != Catalog.Revision || !SameShape(mods, snapshot)) Reload(snapshot);
-                else foreach (EditorRow editor in editors) editor.Refresh();
+                else
+                {
+                    shortcutsChanged = shortcutRevision != Catalog.ShortcutRevision;
+                    if (shortcutsChanged) RefreshShortcutConflicts(snapshot);
+                    foreach (EditorRow editor in editors) editor.Refresh();
+                }
             }
+            if (!rebuilding && (RefreshDisplayText() || shortcutsChanged || languageChanged) && feedbackError == null) RefreshFeedback();
             Overlay.RefreshChoices();
         }
-        private void RefreshLanguage()
+        private bool RefreshLanguage()
         {
-            language = Localization.GetLanguage(); MenuName = Texts.Title;
+            SupportedLanguages current = Localization.GetLanguage();
+            Catalog.Translations.SetLanguage(current);
+            if (language == current) return false;
+            language = current;
+            MenuName = Texts.Title;
             NativeUi.Label(bannerTitle.transform, Texts.PanelTitle);
             search.SetPlaceholder(Texts.Search); NativeUi.Label(close.transform, Texts.Close);
             RefreshShortcutKey();
@@ -216,7 +227,8 @@ namespace OC2ModSettings
             foreach (EditorRow editor in editors) editor.RefreshLanguage();
             foreach (NativeTextInput input in GetComponentsInChildren<NativeTextInput>(true))
                 if (input.Invalid) InputValidationChanged(input);
-            Overlay.RefreshLanguage(); RefreshFeedback();
+            Overlay.RefreshLanguage();
+            return true;
         }
         private void MarkInputDirty() { inputDirty = true; }
         private void RefreshInputBindings()

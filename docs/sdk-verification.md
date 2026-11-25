@@ -33,3 +33,31 @@
 使用新tag需更新实际当选的独立或源码内置公共服务至1.1.0并重启；旧1.0.0仍可读传统tag，但会忽略新tag。SDK源码本身可选，缺失服务时消费者应跳过扩展，继续原配置和业务。生产DLL在`bin/Release/OC2ModSettings.dll`，没有安装到游戏、推送GitHub或上传Release。源码引用和语言刷新细节见[SDK说明](../sdk/README.md)。
 
 最终生产DLL SHA256：`C14BB5D2639EB14F1A2CD7B4F02D872A8F17B6B5E51871D7D4951DD146BCF076`。
+
+## 配置行标题和独立按钮文案（2026-11-25）
+
+AdaptiveCamera `3b70345` 在原 `RegisterActionV1` 字典加了 `ButtonLabel`，提供端 `583d9fd` 已在独立和行旁按钮读取该字段。本轮将用法纳入[源码 SDK](../sdk/README.md#业务按钮)：`RegisterAction` 将 `ModSettingsAction` 转为同一 v1 字典，原字典调用和省略文案时沿用 `DisplayName` 的规则不变。配置行标题仍通过 `DispName` 声明或覆盖，不修改实际配置键。
+
+| 验证等级 | 命令与结果 |
+|---|---|
+| 生产构建、桌面测试 | `scripts/test.ps1`：.NET 3.5 / C# 3 构建通过，377 项断言通过；旧字典及 null、空字符串使用标题，独立按钮文案不参与搜索。 |
+| 消费者编译 | `scripts/test-examples.ps1`：不引用服务 DLL 的 SDK、示例和原生 Renderer 通过。`scripts/test-shared.ps1 -BuildOnly`：四份源码内置程序集编译通过。 |
+| Windows Steam 真实 Unity | `scripts/test-unity.ps1 -WithoutFastInit`：950 项脚本断言通过；覆盖相机同格式字典、强类型行旁按钮、同 ID 换文案、旧租约和旧格式、真实射线命中与 cfg 不被文案更新重写。首次 Unity 测试编译因测试变量重名失败，游戏未启动；修正后重跑。 |
+
+实机目录 `.validation/20261125-135454-914-without-fastinit/`。两张原始截图 `standalone-business-action.png`、`attached-business-action.png` 均为 3840×2160。标题文字区约 270.71×56 UI、单行；按钮文字区约 120.49×42 UI、双行；行旁按钮为 140.49×48 UI。见同目录 `action-geometry.txt`。退出后复核 8 项安装、配置和日志状态及 1 项原存档状态，全部一致，无游戏进程残留。
+
+产物 `bin/Release/OC2ModSettings.dll`（本地 1.2.1 / API v1），SHA256 `7FF04F0D3E05EDB76EA847B819099852A1F2AC21AC66917EE5221E82D14DB03B`。未实测实体设备、Steam 联机、共享服务完整选优矩阵或实际视角编辑业务；未正式部署、推送或发布。公开 1.2.1 会忽略 `ButtonLabel`，使用独立文案需让包含该字段实现的提供端当选并重启游戏。
+
+## 左栏 MOD 名称与 GUID 排序（2026-11-25）
+
+新增独立的[名称租约](api-v1.md#mod-名称)。只改名称不必重注册 `ConfigFile` 或调用 `Refresh()`；同一 GUID 换文案不改变固定、置顶和普通分组内的顺序。冲突详情也读取最新名称。
+
+| 验证等级 | 命令与结果 |
+|---|---|
+| 生产构建、桌面测试 | `scripts/test.ps1`：.NET 3.5 / C# 3 构建通过，457 项断言通过；新增空白输入、精确 GUID、仅标记名称变化、租约替换和释放、置顶不按显示名排序。 |
+| 消费者及内置编译 | `scripts/test-examples.ps1`：SDK、示例和原生 Renderer 不引用服务 DLL 即可编译。`scripts/test-shared.ps1 -BuildOnly`：四份源码内置程序集编译通过，未启动选优矩阵。 |
+| Windows Steam 真实 Unity | `scripts/test-unity.ps1 -WithoutFastInit`：1012 项脚本断言通过；运行时重命名、仅动作 MOD、同 GUID 的旧租约释放、关页时释放后重开、快捷键详情同步、排序及置顶和双栏滚动不变、编辑焦点及草稿不丢均有覆盖。 |
+
+实机目录 `.validation/20261125-173521-159-without-fastinit/`：[截图](../.validation/20261125-173521-159-without-fastinit/mod-display-name.png)为 **3840×2160**；[几何](../.validation/20261125-173521-159-without-fastinit/mod-display-name-geometry.txt)记录左栏同一置顶项改名前后均为 **464.66×68 UI**，标签区域 **396.66×62 UI**，双栏滚动均未变动。`173202` 场第 467 项仍假定新置顶项总排组首，按新的 GUID 组内排序修正断言后重跑。两场退出后 **18/18** 项安装及原存档状态一致，无游戏进程残留。
+
+产物 `bin/Release/OC2ModSettings.dll`（本地 1.2.1 / API v1），SHA256 `D2CC39B540337B839F88716915E2F78851ECC58956058A4272A5C664F5FB6140`。未验物理设备、真实 Steam 联机、其他平台及 AdaptiveCamera 十二语实际接入；未正式部署、推送或发布。公开 1.2.1 没有名称方法，使用时需让包含新实现的服务当选并重启游戏。

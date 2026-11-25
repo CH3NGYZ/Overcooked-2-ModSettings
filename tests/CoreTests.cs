@@ -60,6 +60,20 @@ internal static partial class CoreTests
             RegisteredAction action = RegisteredAction.Read("owner", "action", actionSpec);
             actionSpec["DisplayName"] = "mutated";
             Check(action.Name == "Business" && action.Entry == null && action.Metadata().HideDefault, "actions copy descriptors and require no config entry");
+            Check(new SettingRow().GetActionCaption(action) == "Business", "an action without a custom caption uses its title");
+            foreach (string absent in new string[] { null, "" })
+            {
+                actionSpec["ButtonLabel"] = absent;
+                Check(new SettingRow().GetActionCaption(RegisteredAction.Read("owner", "action", actionSpec)) == "mutated",
+                    "null or empty action caption uses its title");
+            }
+            actionSpec["ButtonLabel"] = "First\nSecond";
+            RegisteredAction captioned = RegisteredAction.Read("owner", "action", actionSpec);
+            actionSpec["ButtonLabel"] = "mutated again";
+            Check(captioned.Metadata().Name == "mutated" && captioned.ButtonLabel == "First\nSecond",
+                "custom caption is copied and does not change the row title");
+            SettingRow captionedRow = new SettingRow { Action = captioned, Metadata = captioned.Metadata() };
+            Check(captionedRow.Matches("mutated", false) && !captionedRow.Matches("First", false), "only the action title, not its button caption, is searchable");
             SettingRow actionRow = new SettingRow { Action = action, Metadata = action.Metadata() };
             Check(!ValueCodec.Editable(actionRow) && !ConfigCommit.Apply(actionRow, true).Success, "business rows cannot be parsed or committed as configuration");
             rejected = false; try { RegisteredAction.Read("owner", "bad\nid", actionSpec); } catch (ArgumentException) { rejected = true; }
@@ -72,8 +86,8 @@ internal static partial class CoreTests
             using (PinnedMods pins = new PinnedMods(navigation))
             {
                 ModConfig host = new ModConfig { Guid = PinnedMods.FixedFirstGuid, Name = "ZZ HostUtilities" };
-                ModConfig pinned = new ModConfig { Guid = "fixture.pinned", Name = "ZZ Pinned" };
-                ModConfig normal = new ModConfig { Guid = "fixture.normal", Name = "AA Normal" };
+                ModConfig pinned = new ModConfig { Guid = "fixture.pinned", Name = "AA Pinned" };
+                ModConfig normal = new ModConfig { Guid = "fixture.normal", Name = "ZZ Normal" };
                 List<ModConfig> mods = new List<ModConfig>(new ModConfig[] { normal, pinned, host }); mods.Sort(pins.Compare);
                 Check(mods[0] == host && mods[1] == pinned && mods[2] == normal, "HostUtilities fixed row precedes pinned and ordinary MODs");
                 string oldPins = savedPins.Value; int oldRevision = pins.Revision;
@@ -82,11 +96,14 @@ internal static partial class CoreTests
                 Check(pins.Toggle(normal.Guid).Success && pins.Contains(pinned.Guid) && pins.Contains(normal.Guid)
                     && !savedPins.Value.Contains(host.Guid), "normal pin updates preserve other pins and remove legacy fixed-row entry");
                 mods.Remove(host); mods.Sort(pins.Compare);
-                Check(mods[0] == normal && mods[1] == pinned, "absent HostUtilities creates no placeholder and pinned names remain sorted");
+                Check(mods[0] == normal && mods[1] == pinned, "absent HostUtilities creates no placeholder and pinned MODs sort by GUID rather than display name");
             }
             VerifyCategoryOrder(root);
             VerifySdk(root);
             VerifyLocalization(root);
+            VerifyTranslationFiles(root);
+            VerifyTranslations(root);
+            VerifyShortcutConflicts(root);
             Console.WriteLine("PASS: " + assertions + " core assertions"); return 0;
         }
         catch (Exception e) { Console.Error.WriteLine(e); return 1; }

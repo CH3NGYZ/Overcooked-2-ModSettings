@@ -5,6 +5,7 @@ using System.IO;
 using BepInEx.Configuration;
 using OC2ModSettings;
 using ModSettingsAttributes = ConsumerSdk::OC2ModSettings.SDK.ModSettingsAttributes;
+using ModSettingsClient = ConsumerSdk::OC2ModSettings.SDK.ModSettingsClient;
 
 internal static partial class CoreTests
 {
@@ -70,6 +71,52 @@ internal static partial class CoreTests
             catalog.Invalidate(); catalog.Invalidate();
             Check(catalog.Revision == revision + 4 && catalog.ConsumeDirty() && !catalog.ConsumeDirty(),
                 "explicit refresh notifications coalesce into one pending UI update");
+        }
+        VerifyModDisplayNameContract(file);
+    }
+
+    private static void VerifyModDisplayNameContract(ConfigFile file)
+    {
+        Check(!new ModSettingsClient().SupportsModDisplayName, "name capability is absent before the SDK connects to a provider");
+        using (ConfigCatalog catalog = new ConfigCatalog())
+        {
+            const string owner = "fixture.example";
+            ModConfig mod = new ModConfig { Guid = owner, Name = "Explicit source name" };
+            ModConfig differentCase = new ModConfig { Guid = "Fixture.example", Name = "Other source name" };
+            ConfigCatalog.Registration registration = new ConfigCatalog.Registration { File = file, Name = mod.Name };
+            using (catalog.Registrations.Set(owner, registration))
+            {
+                catalog.ConsumeDirty();
+                int revision = catalog.Revision, names = catalog.TextRevision;
+                string[] blanks = { null, "", " \t\r\n" };
+                foreach (string blank in blanks)
+                {
+                    bool guidRejected = false, nameRejected = false;
+                    try { catalog.RegisterModDisplayName(blank, "Valid"); } catch (ArgumentException error) { guidRejected = error.ParamName == "ownerGuid"; }
+                    try { catalog.RegisterModDisplayName(owner, blank); } catch (ArgumentException error) { nameRejected = error.ParamName == "displayName"; }
+                    Check(guidRejected && nameRejected, "missing, empty and blank names or GUIDs are rejected");
+                }
+                Check(catalog.TextRevision == names && catalog.GetDisplayName(mod) == mod.Name,
+                    "invalid registrations do not change the visible name or flag a refresh");
+                using (IDisposable first = catalog.RegisterModDisplayName(owner, "  First name\t"))
+                {
+                    Check(catalog.GetDisplayName(mod) == "First name" && catalog.GetDisplayName(differentCase) == differentCase.Name,
+                        "the name is trimmed and the override applies to exactly the named GUID");
+                    Check(catalog.TextRevision == names + 1 && catalog.Revision == revision && !catalog.ConsumeDirty(),
+                        "name registration only marks the separate presentation revision");
+                    using (catalog.RegisterModDisplayName(owner, "Second name"))
+                    {
+                        first.Dispose();
+                        Check(catalog.GetDisplayName(mod) == "Second name" && catalog.TextRevision == names + 2,
+                            "disposing the replaced lease leaves the new name and notification untouched");
+                    }
+                    Check(catalog.GetDisplayName(mod) == mod.Name && catalog.TextRevision == names + 3,
+                        "disposing the current lease restores the source name, not an earlier override");
+                }
+                ConfigCatalog.Registration actual;
+                Check(catalog.Registrations.TryGet(owner, out actual) && ReferenceEquals(actual, registration)
+                    && catalog.Revision == revision && !catalog.ConsumeDirty(), "renaming never replaces or invalidates the config registration");
+            }
         }
     }
 }

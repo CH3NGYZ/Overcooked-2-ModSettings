@@ -41,8 +41,8 @@ public sealed partial class ModSettingsUnityTests
         }
         left = page.Left.Content.anchoredPosition.y; right = page.Right.Content.anchoredPosition.y;
         Submit(candidate.Button, page); yield return null; yield return null;
-        Check(ModSettingsPlugin.Instance.Pins.Contains(guid) && page.Left.Content.GetChild(fixedRow == null ? 0 : 1) == candidate.Owner.transform,
-            "pin moves owner below fixed HostUtilities and before ordinary MODs");
+        Check(ModSettingsPlugin.Instance.Pins.Contains(guid) && ModDisplayTabOrderIsStable(page, ModSettingsPlugin.Instance.Pins),
+            "pin moves owner into the GUID-sorted pinned group, below fixed HostUtilities and before ordinary MODs");
         Check(activeRow != null && page.Right.Content.Find("Setting_Types_boolean") == activeRow,
             "pinning a different MOD does not activate it");
         Check(Mathf.Abs(left - page.Left.Content.anchoredPosition.y) < 1 && Mathf.Abs(right - page.Right.Content.anchoredPosition.y) < 1,

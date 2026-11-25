@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
@@ -11,7 +12,7 @@ namespace OC2ModSettings
     public sealed class ModSettingsPlugin : BaseUnityPlugin
     {
         public const string Guid = "com.ch3ngyz.plugin.overcooked2.modsettings";
-        public const string Version = "1.2.1";
+        public const string Version = "1.3.0";
         public const string DisplayName = "MOD Settings / MOD 设置";
         internal const string Author = "Github@CH3NGYZ";
         internal const string Description = "《胡闹厨房 2》原生公共 MOD 设置页面，支持自动发现配置、即时校验保存、改键、色板和业务按钮。";
@@ -35,6 +36,10 @@ namespace OC2ModSettings
             return Catalog.Registrations.Set(ownerGuid, new ConfigCatalog.Registration
                 { Name = string.IsNullOrEmpty(displayName) ? ownerGuid : displayName, Description = description, File = config });
         }
+        public IDisposable RegisterModDisplayNameV1(string ownerGuid, string displayName)
+        { return Catalog.RegisterModDisplayName(ownerGuid, displayName); }
+        public IDisposable RegisterTranslationsV1(string ownerGuid, IDictionary<string, IDictionary<string, string>> translations)
+        { return Catalog.Translations.Register(ownerGuid, translations); }
         public IDisposable ConfigureEntryV1(ConfigEntryBase config, IDictionary<string, object> metadata)
         {
             if (config == null || metadata == null) throw new ArgumentNullException("config/metadata");
@@ -57,6 +62,7 @@ namespace OC2ModSettings
             Instance = this;
             try
             {
+                Catalog.Translations.LoadFiles(Path.Combine(Paths.BepInExRootPath, "translate"), warning => Logger.LogWarning(warning));
                 Pins = new PinnedMods(Config);
                 harmony = new Harmony(Guid);
                 NativeHooks.Install(harmony);

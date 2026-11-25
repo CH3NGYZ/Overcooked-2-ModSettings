@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace OC2ModSettings
 {
@@ -9,16 +10,14 @@ namespace OC2ModSettings
         private readonly HashSet<RegisteredAction> actionErrors = new HashSet<RegisteredAction>();
         private void BuildActions()
         {
-            foreach (RegisteredAction action in Row.Actions)
-            {
-                RegisteredAction captured = action;
-                actionButtons.Add(Button("Action_" + action.Id, action.Name, 0, 1, delegate { RunAction(captured); }));
-            }
-            if (Row.Action != null)
-            {
-                RegisteredAction action = Row.Action;
-                actionButtons.Add(Button("Action_" + action.Id, action.Name, 0, 1, delegate { RunAction(action); }));
-            }
+            foreach (RegisteredAction action in Row.Actions) BuildAction(action);
+            if (Row.Action != null) BuildAction(Row.Action);
+        }
+        private void BuildAction(RegisteredAction action)
+        {
+            T17Button button = Button("Action_" + action.Id, Row.GetActionCaption(action), 0, 1, delegate { RunAction(action); });
+            button.GetComponent<SettingsControlFeedback>().Action = action;
+            actionButtons.Add(button);
         }
         private bool ActionEnabled(RegisteredAction action)
         {
@@ -38,7 +37,7 @@ namespace OC2ModSettings
                 {
                     actionButtons[i].interactable = false;
                     RegisteredAction action = Row.Action ?? Row.Actions[i];
-                    if (actionErrors.Add(action)) { page.ShowError(error.Message); ModSettingsPlugin.Instance.Report("Action.CanExecute", error); }
+                    if (actionErrors.Add(action)) { page.ShowError(Row.GetActionName(action) + ": " + error.Message); ModSettingsPlugin.Instance.Report("Action.CanExecute", error); }
                 }
                 finally
                 {
@@ -49,15 +48,16 @@ namespace OC2ModSettings
         private void ArrangeActions(float top, float baseHeight, int inline)
         {
             float gap = ActionGap, unit = ActionUnit;
-            if (inline > 0 && Root.Find("Default") != null)
+            Transform defaultButton = Root.Find("Default");
+            if (actionButtons.Count > 0 && defaultButton != null)
             {
                 Controls.Remove(actionButtons[0]);
-                Controls.Insert(Controls.IndexOf(Root.Find("Default").GetComponent<T17Button>()), actionButtons[0]);
+                Controls.Insert(Controls.IndexOf(defaultButton.GetComponent<T17Button>()) + (inline > 0 ? 0 : 1), actionButtons[0]);
             }
             for (int i = 0; i < actionButtons.Count; i++)
             {
                 float x = Row.Action != null ? 1 - unit : i < inline
-                    ? 1 - (Root.Find("Default") == null ? 0 : unit + gap) - unit
+                    ? 1 - (defaultButton == null ? 0 : unit + gap) - unit
                     : 1 - unit - (2 - (i - inline) % 3) * (unit + gap);
                 float y = Row.Action != null || i < inline ? top : baseHeight + ((i - inline) / 3) * 54;
                 Place(actionButtons[i].name, x, x + unit, y, 48);
@@ -74,7 +74,7 @@ namespace OC2ModSettings
                 action.Execute();
             }
             catch (Exception error)
-            { page.ShowError(action.Name + ": " + error.Message); ModSettingsPlugin.Instance.Report("Action " + action.Key, error); }
+            { page.ShowError(Row.GetActionName(action) + ": " + error.Message); ModSettingsPlugin.Instance.Report("Action " + action.Key, error); }
         }
     }
 }

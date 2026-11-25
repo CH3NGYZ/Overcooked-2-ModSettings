@@ -5,7 +5,8 @@ namespace OC2ModSettings
     internal enum UiText
     {
         Title, PanelTitle, Search, Advanced, Defaults, Empty, Confirm, Cancel, Clear, Close, Refresh, Loading,
-        Rebind, PressKey, InvalidValue, ReadOnly, Locked, Capture, PickColor, Hue, Opacity, ColorHint
+        Rebind, PressKey, InvalidValue, ReadOnly, Locked, Capture, PickColor, Hue, Opacity, ColorHint,
+        ShortcutDuplicate, ShortcutDuplicateCount, ShortcutDuplicateMore, TogglePanel
     }
 
     internal static partial class Texts
@@ -14,7 +15,7 @@ namespace OC2ModSettings
         private static Dictionary<UiText, string[]> CreateTranslations()
         {
             Dictionary<UiText, string[]> result = new Dictionary<UiText, string[]>();
-            AddCommon(result); AddEditing(result); AddColor(result); return result;
+            AddCommon(result); AddEditing(result); AddColor(result); AddShortcutConflicts(result); return result;
         }
         // Shipped SupportedLanguages: English .. ChineseTraditional (0 .. 11).
         // Each message keeps all twelve languages together; unknown languages use English.

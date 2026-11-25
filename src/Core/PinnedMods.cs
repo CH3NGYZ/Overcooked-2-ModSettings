@@ -31,7 +31,6 @@ namespace OC2ModSettings
         {
             int order = IsFixed(b.Guid).CompareTo(IsFixed(a.Guid));
             if (order == 0) order = Contains(b.Guid).CompareTo(Contains(a.Guid));
-            if (order == 0) order = StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name);
             return order == 0 ? StringComparer.Ordinal.Compare(a.Guid, b.Guid) : order;
         }
         internal CommitResult Toggle(string guid)

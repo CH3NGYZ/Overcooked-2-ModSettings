@@ -38,14 +38,14 @@ internal static partial class CoreTests
         ChoiceItems english = ChoiceItems.Read(row);
         chinese = true;
         ChoiceItems translated = ChoiceItems.Read(row);
-        Check(!english.SameAs(translated) && translated.Names[1] == "强制主机" && english.Names[1] == "Force host",
+        Check(english.SameValuesAs(translated) && translated.Names[1] == "强制主机" && english.Names[1] == "Force host",
             "same formatter delegate re-evaluates live consumer language without changing the earlier snapshot");
         Check(translated.Values[1].Equals("host") && translated.Values[0].Equals("default")
             && entry.Value == "default" && !File.Exists(file.ConfigFilePath), "localized choices preserve original typed values and do not save on refresh");
         string[] allowed = ((AcceptableValueList<string>)entry.Description.AcceptableValues).AcceptableValues;
         allowed[0] = "host"; allowed[1] = "default";
         ChoiceItems reordered = ChoiceItems.Read(row);
-        Check(!translated.SameAs(reordered) && reordered.Values[0].Equals("host")
+        Check(!translated.SameValuesAs(reordered) && reordered.Values[0].Equals("host")
             && translated.Values[0].Equals("default"), "candidate reordering is detected without mutating a captured selection snapshot");
         attributes.DispName = "模式"; row.Metadata = EntryMetadata.Read(entry, null);
         Check(ChoiceItems.Read(row).Title == "模式" && entry.Definition.Section == "Original" && entry.Definition.Key == "Mode",
@@ -64,7 +64,7 @@ internal static partial class CoreTests
         Check(flagsItems.Names[0].StartsWith("位 ") && flagsItems.Names[1].StartsWith("✓ 位 ")
             && !flagsItems.Names[2].StartsWith("✓"), "flags localize display names without losing checked bit states");
         flags.Value = LocalFlags.Both;
-        Check(!flagsItems.SameAs(ChoiceItems.Read(flagsRow)) && ChoiceItems.Read(flagsRow).Names[2].StartsWith("✓ "),
+        Check(flagsItems.SameValuesAs(ChoiceItems.Read(flagsRow)) && ChoiceItems.Read(flagsRow).Names[2].StartsWith("✓ "),
             "external flag changes invalidate only the display snapshot");
         ConfigEntry<KeyCode> keyEntry = file.Bind("Original", "Key", KeyCode.Space, "key");
         object[] keys = ChoiceItems.ValuesFor(keyEntry);

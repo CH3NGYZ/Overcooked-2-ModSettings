@@ -4,6 +4,7 @@ using System.Threading;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
+using OC2ModSettings.SDK;
 
 namespace OC2ModSettings
 {
@@ -14,22 +15,47 @@ namespace OC2ModSettings
         internal readonly LeaseTable<ConfigEntryBase, IDictionary<string, object>> Metadata;
         internal readonly LeaseTable<ConfigEntryBase, IDictionary<string, object>> Renderers;
         internal readonly LeaseTable<string, RegisteredAction> Actions;
+        internal readonly TranslationCatalog Translations;
+        private readonly LeaseTable<string, string> modDisplayNames;
         private readonly HashSet<ConfigFile> observed = new HashSet<ConfigFile>();
         private int dirty = 1;
-        private int revision;
+        private int revision, shortcutRevision, textRevision;
         internal int Revision { get { return Interlocked.CompareExchange(ref revision, 0, 0); } }
+        internal int ShortcutRevision { get { return Interlocked.CompareExchange(ref shortcutRevision, 0, 0); } }
+        internal int TextRevision { get { return Interlocked.CompareExchange(ref textRevision, 0, 0); } }
         internal ConfigCatalog()
         {
             Registrations = new LeaseTable<string, Registration>(Invalidate);
             Metadata = new LeaseTable<ConfigEntryBase, IDictionary<string, object>>(Invalidate);
             Renderers = new LeaseTable<ConfigEntryBase, IDictionary<string, object>>(Invalidate);
             Actions = new LeaseTable<string, RegisteredAction>(Invalidate);
+            modDisplayNames = new LeaseTable<string, string>(TextChanged);
+            Translations = new TranslationCatalog(TextChanged);
+        }
+        private void TextChanged() { Interlocked.Increment(ref textRevision); }
+        internal IDisposable RegisterModDisplayName(string ownerGuid, string displayName)
+        {
+            if (string.IsNullOrEmpty(ownerGuid) || ownerGuid.Trim().Length == 0) throw new ArgumentException("An owner GUID is required.", "ownerGuid");
+            string name = displayName == null ? null : displayName.Trim();
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("A display name is required.", "displayName");
+            return modDisplayNames.Set(ownerGuid, name);
+        }
+        internal string GetDisplayName(ModConfig mod)
+        {
+            string name;
+            return Translations.Resolve(mod.Guid, ModSettingsTranslations.ModName,
+                modDisplayNames.TryGet(mod.Guid, out name) ? name : mod.Name, false);
         }
         internal void Invalidate() { Interlocked.Increment(ref revision); MarkDirty(); }
         internal void MarkDirty() { Interlocked.Exchange(ref dirty, 1); }
         internal bool ConsumeDirty() { return Interlocked.Exchange(ref dirty, 0) != 0; }
-        private void Changed(object sender, SettingChangedEventArgs args) { MarkDirty(); }
-        private void Reloaded(object sender, EventArgs args) { MarkDirty(); }
+        private void Changed(object sender, SettingChangedEventArgs args)
+        {
+            if (ShortcutConflicts.Tracks(args.ChangedSetting)) Interlocked.Increment(ref shortcutRevision);
+            MarkDirty();
+        }
+        private void Reloaded(object sender, EventArgs args)
+        { Interlocked.Increment(ref shortcutRevision); MarkDirty(); }
 
         internal List<ModConfig> Snapshot()
         {
@@ -75,7 +101,7 @@ namespace OC2ModSettings
                     IDictionary<string, object> metadata;
                     Metadata.TryGet(entry, out metadata);
                     EntryMetadata display = EntryMetadata.Read(entry, metadata);
-                    if (!display.Hidden) mod.Rows.Add(new SettingRow { Owner = pair.Key, Entry = entry, Metadata = display });
+                    if (!display.Hidden) mod.Rows.Add(new SettingRow { Owner = pair.Key, Entry = entry, Metadata = display, Translations = Translations });
                     }
                     catch (Exception error)
                     { if (ModSettingsPlugin.Instance != null) ModSettingsPlugin.Instance.Report("ConfigCatalog " + pair.Key + "/" + definition, error); }
@@ -83,7 +109,7 @@ namespace OC2ModSettings
                 foreach (RegisteredAction action in actions)
                 {
                     if (action.Owner != pair.Key) continue;
-                    if (action.Entry == null) mod.Rows.Add(new SettingRow { Owner = pair.Key, Action = action, Metadata = action.Metadata() });
+                    if (action.Entry == null) mod.Rows.Add(new SettingRow { Owner = pair.Key, Action = action, Metadata = action.Metadata(), Translations = Translations });
                     else foreach (SettingRow row in mod.Rows)
                         if (ReferenceEquals(row.Entry, action.Entry)) row.Actions.Add(action);
                 }
@@ -94,11 +120,6 @@ namespace OC2ModSettings
             }
             foreach (ConfigFile old in new List<ConfigFile>(observed))
                 if (!used.Contains(old)) { old.SettingChanged -= Changed; old.ConfigReloaded -= Reloaded; observed.Remove(old); }
-            result.Sort(delegate(ModConfig a, ModConfig b)
-            {
-                int c = StringComparer.CurrentCultureIgnoreCase.Compare(a.Name, b.Name);
-                return c == 0 ? StringComparer.Ordinal.Compare(a.Guid, b.Guid) : c;
-            });
             return result;
         }
         public void Dispose()

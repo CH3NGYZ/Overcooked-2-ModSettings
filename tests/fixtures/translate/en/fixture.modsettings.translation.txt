@@ -1,0 +1,8 @@
+mod=File Translation Fixture
+group/Base category=File Group
+config/Fixture/Number=File Number
+config/Fixture/Number/description=English file guidance
+action/run/title=File Action Title
+action/run/label=File Run
+action/run/description=English file action guidance
+action/inspect/label=File Inspect

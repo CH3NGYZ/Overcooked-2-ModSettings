@@ -28,10 +28,11 @@ namespace OC2ModSettings
         }
         internal void FocusChoice(int index)
         { if (page.Domain != null && index >= 0 && index < buttons.Count) page.Domain.SetSelectedGameObject(buttons[index].gameObject); }
-        internal void Capture(string title, bool shortcut, Action<object> selected)
+        internal void Capture(Func<string> title, bool shortcut, Action<object> selected)
         {
-            RectTransform root = Begin(title + "\n" + Texts.Capture);
-            localizedTitle = delegate { return title + "\n" + Texts.Capture; };
+            Func<string> caption = delegate { return title() + "\n" + Texts.Capture; };
+            RectTransform root = Begin(caption());
+            localizedTitle = caption;
             T17Button clear = NativeUi.CloneButton(page.ButtonTemplate, root, "Clear", Texts.Clear,
                 delegate { Close(); selected(shortcut ? (object)new KeyboardShortcut(KeyCode.None) : KeyCode.None); }, page);
             NativeUi.Box(clear.GetComponent<RectTransform>(), 30, 160, 260, 48); clear.SetEventSystem(page.Domain);
@@ -77,10 +78,16 @@ namespace OC2ModSettings
             previous = null;
             page.KeyboardFeedback();
         }
+        internal void RefreshLocalizedText()
+        {
+            if (localizedTitle == null || titleLabel == null) return;
+            string title = localizedTitle();
+            if (titleLabel.text != title) NativeUi.Label(titleLabel.transform, title);
+        }
         internal void RefreshLanguage()
         {
             if (!IsOpen) return;
-            if (localizedTitle != null) NativeUi.Label(titleLabel.transform, localizedTitle());
+            RefreshLocalizedText();
             if (choiceRow == null && choiceColumn != null && localizedTitle != null && buttons.Count == 1)
                 NativeUi.Label(buttons[0].transform, Texts.Confirm);
             if (capture != null) NativeUi.Label(capture.ClearButton.transform, Texts.Clear);

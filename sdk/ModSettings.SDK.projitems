@@ -3,5 +3,6 @@
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)ModSettingsAttributes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ModSettingsClient.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ModSettingsTranslations.cs" />
   </ItemGroup>
 </Project>

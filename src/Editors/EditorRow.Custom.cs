@@ -20,16 +20,15 @@ namespace OC2ModSettings
             host["Domain"] = page.Domain;
             host["Commit"] = new Func<object, IDictionary<string, object>>(delegate(object value)
             {
-                CommitResult result = ConfigCommit.Apply(Row, value);
-                if (!result.Success) page.ShowError(result.Error);
+                CommitResult result = page.CommitSetting(Row, value);
+                if (!result.Success) page.ShowCommitError(Row, result.Error);
                 else page.ClearError();
                 return new Dictionary<string, object> { { "Success", result.Success }, { "ActualValue", result.ActualValue }, { "Error", result.Error } };
             });
             host["SetHeight"] = new Action<float>(delegate(float height)
             {
-                float before = Height; customHeight = Mathf.Clamp(height, 80, 600); Height = customHeight;
-                if (custom != null) Arrange();
-                float next = Height; Height = before; page.ResizeRow(this, next);
+                customHeight = Mathf.Clamp(height, 80, 600);
+                if (custom != null) Rearrange();
             });
             host["SetCallbacks"] = new Action<IDictionary<string, object>>(delegate(IDictionary<string, object> callbacks)
             {

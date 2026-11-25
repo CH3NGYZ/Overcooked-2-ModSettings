@@ -200,6 +200,11 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         CheckRaycast(page.Right.Content.Find("Setting_Types_boolean/Toggle").GetComponent<T17Button>(), page.Domain, "setting toggle is topmost selectable");
         ScreenCapture.CaptureScreenshot(Path.Combine(output, "settings-" + fixtureCount + "-mods.png"));
         WriteGeometry(page);
+        if (Array.IndexOf(Environment.GetCommandLineArgs(), "-modSettingsTranslationOnly") >= 0)
+        {
+            IEnumerator translated = VerifyTranslations(page); while (translated.MoveNext()) yield return translated.Current;
+            File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: " + assertions + " actual Unity MOD translation assertions"); yield break;
+        }
         if (themeFixture)
         {
             IEnumerator themed = VerifyFeedback(page); while (themed.MoveNext()) yield return themed.Current;
@@ -237,6 +242,8 @@ public sealed partial class ModSettingsUnityTests : BaseUnityPlugin
         IEnumerator colors = VerifyColorPicker(page); while (colors.MoveNext()) yield return colors.Current;
         IEnumerator actions = VerifyActions(page); while (actions.MoveNext()) yield return actions.Current;
         IEnumerator keys = VerifyKeyEditors(page); while (keys.MoveNext()) yield return keys.Current;
+        IEnumerator conflicts = VerifyShortcutConflicts(page); while (conflicts.MoveNext()) yield return conflicts.Current;
+        IEnumerator displayNames = VerifyModDisplayNames(page); while (displayNames.MoveNext()) yield return displayNames.Current;
         IEnumerator lifecycle = VerifyLifecycle(page, button, root); while (lifecycle.MoveNext()) yield return lifecycle.Current;
         for (int i = 0; i < 3; i++)
         {

@@ -10,7 +10,7 @@ namespace OC2ModSettings.SDK
     /// </summary>
     public sealed class ModSettingsAttributes
     {
-        /// <summary>Localized setting label.</summary>
+        /// <summary>Localized config row title; does not change the stored key or any attached action caption.</summary>
         public string DispName;
         /// <summary>Localized category label; use CategoryOrder for language-independent ordering.</summary>
         public string Category;

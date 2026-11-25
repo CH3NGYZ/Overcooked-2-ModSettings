@@ -60,29 +60,4 @@ namespace OC2ModSettings
             }
         }
     }
-
-    internal sealed class SettingRow
-    {
-        internal string Owner;
-        internal ConfigEntryBase Entry;
-        internal EntryMetadata Metadata;
-        internal RegisteredAction Action;
-        internal readonly List<RegisteredAction> Actions = new List<RegisteredAction>();
-        internal string Identity { get { return Entry == null ? "@Action\n" + Action.Id : Entry.Definition.Section + "\n" + Entry.Definition.Key; } }
-        internal bool Matches(string query, bool advanced)
-        {
-            if (Metadata.Hidden || (!advanced && Metadata.Advanced)) return false;
-            if (string.IsNullOrEmpty(query) || (Metadata.Name + "\n" + Metadata.Category + "\n" + Metadata.Description)
-                .IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0) return true;
-            foreach (RegisteredAction action in Actions)
-                if ((action.Name + "\n" + action.Description).IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0) return true;
-            return false;
-        }
-    }
-
-    internal sealed class ModConfig
-    {
-        internal string Guid, Name, Description;
-        internal readonly List<SettingRow> Rows = new List<SettingRow>();
-    }
 }

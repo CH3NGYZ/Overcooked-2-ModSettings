@@ -74,7 +74,14 @@ namespace OC2ModSettings
             try { items = ChoiceItems.Read(choiceRow); }
             catch (Exception error) { Close(); page.ShowError(error.Message); return; }
             if (items == null) { Close(); return; }
-            if (items.SameAs(choiceItems)) return;
+            if (items.SameValuesAs(choiceItems))
+            {
+                if (items.Title != choiceItems.Title) NativeUi.Label(titleLabel.transform, items.Title);
+                for (int index = 0; index < items.Names.Length; index++)
+                    if (items.Names[index] != choiceItems.Names[index]) NativeUi.Label(buttons[index].transform, items.Names[index]);
+                choiceItems = items;
+                return;
+            }
             ChoiceState state = RememberChoice(); ApplyChoices(items); RestoreChoice(state);
         }
         internal void ChooseDefaults(Action<int> selected)

@@ -39,17 +39,17 @@ namespace OC2ModSettings
         {
             object[] values = ValuesFor(row.Entry);
             if (values == null) return null;
-            ChoiceItems result = new ChoiceItems { Title = row.Metadata.Name, Values = values, Names = new string[values.Length] };
+            ChoiceItems result = new ChoiceItems { Title = row.DisplayName, Values = values, Names = new string[values.Length] };
             bool flags = row.Entry.SettingType.IsEnum && row.Entry.SettingType.IsDefined(typeof(FlagsAttribute), false);
             for (int i = 0; i < values.Length; i++)
                 result.Names[i] = (flags && EnumBits.Contains(row.Entry.BoxedValue, values[i]) ? "✓ " : "") + ValueCodec.Format(row, values[i]);
             return result;
         }
-        internal bool SameAs(ChoiceItems other)
+        internal bool SameValuesAs(ChoiceItems other)
         {
-            if (other == null || Title != other.Title || Values.Length != other.Values.Length) return false;
+            if (other == null || Values.Length != other.Values.Length) return false;
             for (int i = 0; i < Values.Length; i++)
-                if (!Equals(Values[i], other.Values[i]) || Names[i] != other.Names[i]) return false;
+                if (!Equals(Values[i], other.Values[i])) return false;
             return true;
         }
     }

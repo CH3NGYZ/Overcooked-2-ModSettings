@@ -6,9 +6,10 @@ namespace OC2ModSettings
 {
     internal sealed partial class NativeOverlay
     {
-        internal void PickColor(string title, Func<Color> current, Action<Color> preview, Func<Color, string> commit, Action cancelled)
+        internal void PickColor(Func<string> title, Func<Color> current, Action<Color> preview, Func<Color, string> commit, Action cancelled)
         {
-            RectTransform body = Begin(title);
+            RectTransform body = Begin(title());
+            localizedTitle = title;
             colorPicker = body.gameObject.AddComponent<ColorPicker>();
             colorPicker.Initialize(page, current, preview, commit, cancelled);
             colorClose = NativeUi.CloneButton(page.ButtonTemplate, body, "ClosePicker", Texts.Close, Close, page);

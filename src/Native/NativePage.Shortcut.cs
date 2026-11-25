@@ -7,6 +7,7 @@ namespace OC2ModSettings
     {
         private T17Button shortcutButton;
         private KeyCapture shortcutCapture;
+        private ShortcutWarning shortcutWarning;
         private string shortcutCaption;
         internal bool IsRecordingToggleKey { get { return shortcutCapture != null && shortcutCapture.isActiveAndEnabled; } }
         internal bool IsEditingText
@@ -29,6 +30,7 @@ namespace OC2ModSettings
             rect.sizeDelta = new Vector2(168, 40); rect.anchoredPosition = new Vector2(ModTabInset, 0);
             RowFocus focus = shortcutButton.gameObject.AddComponent<RowFocus>();
             focus.Selected = delegate { onRight = false; RefreshPins(); };
+            shortcutWarning = ShortcutWarning.Create(this, Shortcut.Setting, rect, shortcutButton.GetComponentInChildren<T17Text>(), shortcutButton);
             RefreshShortcutKey();
         }
         private void RefreshShortcutKey()
@@ -46,12 +48,13 @@ namespace OC2ModSettings
             shortcutCapture.Initialize(this, KeyCapture.Mode.GlobalToggle,
                 delegate(object value)
                 {
-                    CommitResult result = ConfigCommit.Apply(Shortcut.Setting, value);
+                    CommitResult result = CommitSetting(Shortcut.Setting, value);
                     EndShortcutCapture();
-                    if (!result.Success) ShowError(result.Error);
+                    if (!result.Success) ShowCommitError(Shortcut.Setting, result.Error);
+                    else ClearError();
                 },
                 delegate { EndShortcutCapture(); CaptureCancelled(); });
-            RefreshShortcutKey(); RefreshFeedback();
+            RefreshShortcutKey(); ClearError();
         }
         private bool EndShortcutCapture()
         {

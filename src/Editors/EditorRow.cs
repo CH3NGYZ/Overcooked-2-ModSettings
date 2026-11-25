@@ -15,7 +15,7 @@ namespace OC2ModSettings
         internal readonly List<Selectable> Controls = new List<Selectable>();
         internal Selectable First { get { return Controls.Count == 0 ? null : Controls[0]; } }
         private NativePage page;
-        private T17Text valueLabel;
+        private T17Text nameLabel, valueLabel;
         private Image toggleIcon;
         private NativeTextInput text;
         private PreviewSlider slider;
@@ -31,8 +31,8 @@ namespace OC2ModSettings
             editor.Root = NativeUi.Rect(page.Right.Content, "Setting_" + row.Identity.Replace('\n', '_'), Vector2.zero, Vector2.one);
             NativeUi.Backer(editor.Root, new Color(1, 1, 1, .08f)).raycastTarget = false;
             RectTransform name = NativeUi.Rect(editor.Root, "Name", new Vector2(.01f, .08f), new Vector2(.32f, .92f));
-            T17Text label = NativeUi.Text(page.TextTemplate, name, "Text", row.Metadata.Name, 22);
-            label.color = Color.white; label.resizeTextForBestFit = false;
+            editor.nameLabel = NativeUi.Text(page.TextTemplate, name, "Text", row.DisplayName, 22);
+            editor.nameLabel.color = Color.white;
             editor.Root.gameObject.AddComponent<SettingsRowFeedback>().Initialize(page, row);
             if (row.Entry != null)
             {
@@ -40,13 +40,18 @@ namespace OC2ModSettings
                 else if (!ValueCodec.Editable(row)) editor.ReadOnly();
                 else editor.BuildBuiltin(width);
             }
+            if (editor.shortcutWarning == null && ShortcutConflicts.Tracks(row.Entry))
+            {
+                T17Text keyLabel = editor.valueLabel ?? editor.nameLabel;
+                editor.shortcutWarning = ShortcutWarning.Create(page, row, keyLabel.transform.parent, keyLabel, editor.Controls.ToArray());
+            }
             editor.BuildActions();
             editor.Arrange();
             foreach (Selectable control in editor.Controls)
             {
                 RowFocus focus = control.gameObject.AddComponent<RowFocus>(); focus.Row = editor.Root; focus.Column = page.Right;
             }
-            editor.Refresh(); return editor;
+            editor.RefreshShortcutWarning(); editor.Refresh(); return editor;
         }
         private T17Button Button(string name, string label, float min, float max, Action click)
         {
@@ -76,12 +81,7 @@ namespace OC2ModSettings
                 toggleIcon = icon.gameObject.AddComponent<Image>(); toggleIcon.preserveAspect = true; toggleIcon.raycastTarget = false;
             }
             else if (type == typeof(KeyCode)) BuildKeyCode();
-            else if (type == typeof(KeyboardShortcut))
-            {
-                Button("Capture", Texts.Rebind, 0, .80f, delegate { page.Overlay.Capture(Row.Metadata.Name, true, delegate(object value) { Commit(value); }); });
-                valueLabel = NativeUi.Text(page.TextTemplate, NativeUi.Rect(Root, "ShortcutValue", Vector2.zero, Vector2.one), "Text", "", 22);
-                valueLabel.color = Color.white;
-            }
+            else if (type == typeof(KeyboardShortcut)) BuildKeyboardShortcut();
             else if (type.IsEnum || Choices() != null)
             {
                 T17Button choice = Button("Dropdown", "", 0, .80f, OpenChoices); valueLabel = choice.GetComponentInChildren<T17Text>(true);
@@ -105,11 +105,12 @@ namespace OC2ModSettings
         }
         private string Commit(object value)
         {
-            CommitResult result = ConfigCommit.Apply(Row, value);
+            CommitResult result = page.CommitSetting(Row, value);
             preview = null; Refresh();
-            if (!result.Success) page.ShowError(Row.Metadata.Name + ": " + result.Error);
+            string error = result.Success ? null : Row.DisplayName + ": " + result.Error;
+            if (!result.Success) page.ShowCommitError(Row, error);
             else page.ClearError();
-            return result.Success ? null : Row.Metadata.Name + ": " + result.Error;
+            return error;
         }
         internal void Refresh()
         {
@@ -133,8 +134,18 @@ namespace OC2ModSettings
                 RefreshComponents(value);
                 Delegate action; if (customCallbacks.TryGetValue("Refresh", out action)) ((Action)action)();
             }
-            catch (Exception e) { page.ShowError(Row.Metadata.Name + ": " + e.Message); }
+            catch (Exception e) { page.ShowError(Row.DisplayName + ": " + e.Message); }
             finally { refreshing = false; }
+        }
+        internal bool RefreshLocalizedText()
+        {
+            for (int index = 0; index < actionButtons.Count; index++)
+                NativeUi.Label(actionButtons[index].transform, Row.GetActionCaption(Row.Action ?? Row.Actions[index]));
+            string displayName = Row.DisplayName;
+            if (nameLabel.text == displayName) return false;
+            NativeUi.Label(nameLabel.transform, displayName);
+            Rearrange();
+            return true;
         }
         internal void RefreshLanguage()
         {

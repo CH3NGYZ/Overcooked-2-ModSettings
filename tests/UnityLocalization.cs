@@ -24,6 +24,13 @@ public sealed partial class ModSettingsUnityTests
         harmony.Patch(poll, new HarmonyMethod(typeof(ModSettingsUnityTests), "SkipConsumerPolling"));
         isolated.Add(poll);
     }
+    private void IsolateLegacyLanguageRefresh(List<MethodInfo> isolated)
+    {
+        IsolateLanguagePoll(isolated, "OC2HudCustomization.SettingsLanguageSync", "Poll");
+        IsolateLanguagePoll(isolated, "HostUtilities.Language", "Update");
+        IsolateLanguagePoll(isolated, "OC2AdaptiveCamera.Settings.CameraSettings", "UpdateLanguage");
+        IsolateLanguagePoll(isolated, "OC2AdaptiveCamera.Editing.CameraEditor", "PollService");
+    }
     private IEnumerator VerifyLocalization(NativePage page, T17Button entryButton)
     {
         testLanguage = Localization.GetLanguage();
@@ -57,8 +64,7 @@ public sealed partial class ModSettingsUnityTests
         {
             // Test in-place public labels separately from installed consumers' intentional
             // catalog rebuilds. The fixture's explicit SDK Refresh still runs below.
-            IsolateLanguagePoll(isolated, "OC2HudCustomization.SettingsLanguageSync", "Poll");
-            IsolateLanguagePoll(isolated, "HostUtilities.Language", "Update");
+            IsolateLegacyLanguageRefresh(isolated);
             harmony.Patch(readLanguage, new HarmonyMethod(typeof(ModSettingsUnityTests), "OverrideLanguage"));
             yield return new WaitForSecondsRealtime(.4f);
             Submit(page.Left.Content.Find("Mod_fixture.localization"), page); yield return new WaitForSecondsRealtime(.4f);
@@ -164,7 +170,7 @@ public sealed partial class ModSettingsUnityTests
                 && Caption(picker.transform.Find("ControlsHint")) == Texts.ColorHint, "open color overlay follows game language in place");
             ScreenCapture.CaptureScreenshot(Path.Combine(output, "language-French-color.png")); yield return new WaitForEndOfFrame(); yield return null;
             page.Overlay.Close();
-            page.Overlay.Capture("Shortcut", true, delegate(object value) {}); yield return null;
+            page.Overlay.Capture(delegate { return "Shortcut"; }, true, delegate(object value) {}); yield return null;
             testLanguage = SupportedLanguages.Polish; yield return new WaitForSecondsRealtime(.4f);
             Check(page.Domain.IsDisabled() && Caption(page.Overlay.Root.Find("Dialog/Clear")) == Texts.Clear
                 && Caption(page.Overlay.Root.Find("Dialog/Title")).EndsWith(Texts.Capture), "capture changes language while retaining input suppression");

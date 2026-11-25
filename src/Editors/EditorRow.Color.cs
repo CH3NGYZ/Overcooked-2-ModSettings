@@ -22,7 +22,7 @@ namespace OC2ModSettings
             colorPreview.raycastTarget = false;
             Button("PickColor", Texts.PickColor, 0, 1, delegate
             {
-                page.Overlay.PickColor(Row.Metadata.Name, delegate { return (Color)Row.Entry.BoxedValue; },
+                page.Overlay.PickColor(delegate { return Row.DisplayName; }, delegate { return (Color)Row.Entry.BoxedValue; },
                     delegate(Color value) { colorDraft = value; RefreshColor(value); },
                     delegate(Color value) { colorDraft = null; return Commit(value); },
                     delegate { colorDraft = null; Refresh(); });

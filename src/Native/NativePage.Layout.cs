@@ -14,7 +14,7 @@ namespace OC2ModSettings
         internal bool ContentReady { get { return contentBuilt && !rebuilding; } }
         private void RefreshContent()
         {
-            if (language != Localization.GetLanguage()) RefreshLanguage();
+            RefreshLanguage();
             RefreshShortcutKey();
             Catalog.ConsumeDirty();
             List<ModConfig> snapshot = Catalog.Snapshot(); snapshot.Sort(CompareMods);
@@ -24,6 +24,8 @@ namespace OC2ModSettings
                 || !SameShape(mods, snapshot)) { Reload(snapshot); return; }
             // Values can change while hidden without a structural API refresh. Keep the existing
             // controls and callbacks, but always read the current ConfigEntry values on reopening.
+            RefreshShortcutConflicts(snapshot);
+            RefreshDisplayText();
             foreach (EditorRow editor in editors) editor.Refresh();
             WireNavigation(); RefreshFeedback(); RefreshPins();
             StopAllCoroutines(); StartCoroutine(RestoreLayout(false, false, false));
@@ -41,8 +43,9 @@ namespace OC2ModSettings
             Remember(); CancelEdits(false);
             mods = snapshot;
             mods.Sort(CompareMods); pinRevision = pinned.Revision; hoveredPin = null;
+            RefreshShortcutConflicts(mods);
             revision = Catalog.Revision;
-            if (language != Localization.GetLanguage()) RefreshLanguage();
+            RefreshLanguage();
             contentDomain = Domain;
             string selected = PageMemory.Selected;
             active = mods.Find(delegate(ModConfig m) { return m.Guid == selected; });
@@ -50,7 +53,7 @@ namespace OC2ModSettings
             PageMemory.Selected = active == null ? null : active.Guid;
             if (firstBuild)
             {
-                rebuilding = true; search.interactable = clearSearch.interactable = false; ShowHelp(Texts.Loading);
+                rebuilding = true; search.interactable = clearSearch.interactable = false; SetHelp(Texts.Loading, Color.white);
                 initialBuild = StartCoroutine(LoadSettings());
             }
             else
@@ -77,7 +80,7 @@ namespace OC2ModSettings
                 for (int i = 0; i < mods.Count; i++)
                 {
                     ModConfig mod = mods[i];
-                    T17Button button = NativeUi.CloneButton(ButtonTemplate, Left.Content, "Mod_" + mod.Guid, mod.Name,
+                    T17Button button = NativeUi.CloneButton(ButtonTemplate, Left.Content, "Mod_" + mod.Guid, Catalog.GetDisplayName(mod),
                         delegate { Activate(mod.Guid); }, this);
                     NativeUi.Box(button.GetComponent<RectTransform>(), ModTabInset, i * 72, Mathf.Max(100, width - 2 * ModTabInset), 68);
                     foreach (T17Text text in button.GetComponentsInChildren<T17Text>(true))
@@ -163,7 +166,7 @@ namespace OC2ModSettings
                     while (rows.MoveNext()) yield return rows.Current;
                 }
                 finally { if (inactive) Right.Content.gameObject.SetActive(true); }
-                WireNavigation(); UpdateSelectionMarker(); RefreshPins();
+                CollectRightControls(); WireNavigation(); UpdateSelectionMarker(); RefreshPins();
             }
             finally { rebuilding = false; }
         }
@@ -183,9 +186,10 @@ namespace OC2ModSettings
         {
             System.Diagnostics.Stopwatch budget = System.Diagnostics.Stopwatch.StartNew();
             NativeUi.ClearChildren(Right.Content);
-            ShowHelp(null);
+            categoryLabels.Clear();
+            ClearFeedbackError(); SetHelp(null, Color.white);
             float width = Mathf.Max(300, Right.Viewport.rect.width), y = 0;
-            search.SetValue(query); rightControls.Add(search); rightControls.Add(clearSearch); rightControls.Add(close);
+            search.SetValue(query);
             T17Button advanced = ActionButton(Texts.Advanced + (PageMemory.Advanced ? " ✓" : ""), 0, y, width * .45f,
                 delegate { PageMemory.Advanced = !PageMemory.Advanced; BuildSettings(true, false); });
             T17Button defaults = ActionButton(Texts.Defaults, width * .46f, y, width * .31f,
@@ -193,7 +197,7 @@ namespace OC2ModSettings
             T17Button refresh = ActionButton(Texts.Refresh, width * .78f, y, width * .22f,
                 delegate { Catalog.Invalidate(); Reload(); });
             advancedButton = advanced; defaultsButton = defaults; refreshButton = refresh;
-            rightControls.Add(advanced); rightControls.Add(defaults); rightControls.Add(refresh); y += 50;
+            y += 50;
             string category = null;
             if (active != null)
                 foreach (SettingRow row in active.Rows)
@@ -206,7 +210,8 @@ namespace OC2ModSettings
                         RectTransform header = NativeUi.Rect(Right.Content, "Category", Vector2.zero, Vector2.one);
                         NativeUi.Box(header, 4, y, width - 8, 40);
                         NativeUi.Backer(header, Palette.Category).raycastTarget = false;
-                        T17Text label = NativeUi.Text(TextTemplate, header, "Label", category, 24);
+                        T17Text label = NativeUi.Text(TextTemplate, header, "Label", row.DisplayCategory, 24);
+                        categoryLabels.Add(label, row);
                         label.alignment = TextAnchor.MiddleCenter; label.color = Color.white;
                         label.resizeTextForBestFit = true; label.resizeTextMinSize = 18; label.resizeTextMaxSize = 24;
                         RectTransform divider = NativeUi.Rect(header, "Divider", Vector2.zero, new Vector2(1, 0));
@@ -216,7 +221,7 @@ namespace OC2ModSettings
                     }
                     EditorRow editor = EditorRow.Create(this, row, width - 32);
                     NativeUi.Box(editor.Root, 16, y, width - 32, editor.Height); y += editor.Height + 4;
-                    editors.Add(editor); rightControls.AddRange(editor.Controls);
+                    editors.Add(editor);
                     if (distribute && budget.ElapsedMilliseconds >= 4)
                     { yield return null; budget.Reset(); budget.Start(); }
                 }
@@ -241,33 +246,35 @@ namespace OC2ModSettings
             if (active == null) return;
             Overlay.ChooseDefaults(delegate(int ignored)
             {
+                bool checkShortcuts = false;
+                SettingRow failed = null;
+                string error = null;
                 foreach (SettingRow row in active.Rows)
                 {
                     if (row.Entry == null || row.Metadata.ReadOnly || row.Metadata.Hidden || row.Metadata.HideDefault) continue;
+                    checkShortcuts |= ShortcutConflicts.Tracks(row.Entry);
                     CommitResult result = ConfigCommit.Apply(row, row.Entry.DefaultValue);
-                    if (!result.Success) { ShowError(row.Metadata.Name + ": " + result.Error); return; }
+                    if (!result.Success) { failed = row; error = row.DisplayName + ": " + result.Error; break; }
                 }
+                if (checkShortcuts) RefreshShortcutConflicts(mods);
                 foreach (EditorRow editor in editors) editor.Refresh();
-                ClearError();
+                if (failed == null) ClearError();
+                else ShowCommitError(failed, error);
             });
         }
-        private void ShowHelp(string description)
-        {
-            bool invalid = invalidInput != null && invalidInput.IsEditing && invalidInput.Invalid;
-            NativeUi.Label(help.transform, invalid ? invalidInput.ValidationMessage : description ?? "");
-            help.color = invalid ? new Color(.7f, .08f, .05f) : Color.white;
-        }
-        internal void ClearError()
-        {
-            RefreshFeedback();
-        }
-        internal void ShowError(string error) { NativeUi.Label(help.transform, error); help.color = new Color(.7f, .08f, .05f); }
         private void UpdateSelectionMarker()
         {
             for (int i = 0; i < tabs.Count; i++)
             {
-                NativeUi.Label(tabs[i].transform, (mods[i] == active ? "● " : "") + mods[i].Name);
+                NativeUi.Label(tabs[i].transform, (mods[i] == active ? "● " : "") + Catalog.GetDisplayName(mods[i]));
             }
+        }
+        private void CollectRightControls()
+        {
+            rightControls.Clear();
+            rightControls.Add(search); rightControls.Add(clearSearch); rightControls.Add(close);
+            rightControls.Add(advancedButton); rightControls.Add(defaultsButton); rightControls.Add(refreshButton);
+            foreach (EditorRow editor in editors) rightControls.AddRange(editor.Controls);
         }
         private void WireNavigation()
         {
@@ -326,7 +333,7 @@ namespace OC2ModSettings
             row.Root.sizeDelta += new Vector2(0, delta);
             for (int i = row.Root.GetSiblingIndex() + 1; i < Right.Content.childCount; i++)
             { RectTransform rect = Right.Content.GetChild(i) as RectTransform; if (rect != null) rect.anchoredPosition -= new Vector2(0, delta); }
-            Right.Height(Right.Content.rect.height + delta); WireNavigation();
+            Right.Height(Right.Content.rect.height + delta);
         }
         private IEnumerator RestoreLayout(bool focusRight, bool layoutChanged, bool preserveSearch)
         {

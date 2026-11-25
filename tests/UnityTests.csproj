@@ -17,6 +17,8 @@
   <ItemGroup><Compile Include="UnityOverlay.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityImmediateEditing.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityKeyEditors.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityShortcutConflicts.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityModDisplayNames.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityOpeningPerformance.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityResponsiveRows.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityColorPicker.cs" /><Compile Include="UnityActions.cs" /></ItemGroup>
@@ -26,7 +28,7 @@
   <ItemGroup><Compile Include="UnityClipping.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityTextSelection.cs" /><Compile Include="UnityTextFocus.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityCategoryOrder.cs" /></ItemGroup>
-  <ItemGroup><Compile Include="UnityLocalization.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="UnityLocalization.cs" /><Compile Include="UnityTranslations.cs" /></ItemGroup>
   <ItemGroup><Compile Include="UnityShortcutCapture.cs" /><Compile Include="UnityNativeTheme.cs" /></ItemGroup>
   <ItemGroup><Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>
   <ItemGroup><Reference Include="UnityEngine.InputModule"><HintPath>$(Managed)\UnityEngine.InputModule.dll</HintPath><Private>false</Private></Reference></ItemGroup>

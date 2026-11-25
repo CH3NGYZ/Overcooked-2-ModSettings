@@ -6,7 +6,7 @@ namespace OC2ModSettings
 {
     internal sealed class RegisteredAction
     {
-        internal string Owner, Id, Name, Description, Category;
+        internal string Owner, Id, Name, ButtonLabel, Description, Category;
         internal int Order;
         internal int? CategoryOrder;
         internal bool ClosePage;
@@ -25,7 +25,8 @@ namespace OC2ModSettings
                 || !descriptor.TryGetValue("DisplayName", out name) || !(name is string) || string.IsNullOrEmpty((string)name))
                 throw new ArgumentException("Action v1 requires Version=1, DisplayName and Action Execute.");
             return new RegisteredAction { Owner = owner, Id = id, Name = (string)name, Execute = (Action)execute,
-                Description = Optional(descriptor, "Description", ""), Category = Optional(descriptor, "Category", "General"),
+                ButtonLabel = Optional<string>(descriptor, "ButtonLabel", null),
+                Description = Optional<string>(descriptor, "Description", null), Category = Optional(descriptor, "Category", "General"),
                 Order = Optional(descriptor, "Order", 0), ClosePage = Optional(descriptor, "ClosePage", false),
                 CategoryOrder = Optional<int?>(descriptor, "CategoryOrder", null),
                 Entry = Optional<ConfigEntryBase>(descriptor, "Entry", null), CanExecute = Optional<Func<bool>>(descriptor, "CanExecute", null) };

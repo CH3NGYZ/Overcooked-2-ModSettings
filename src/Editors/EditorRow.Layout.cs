@@ -6,21 +6,27 @@ namespace OC2ModSettings
     {
         // Use the narrowest supported action area for a shared button column on every row.
         private const float ActionUnit = .49f * .24f, ActionGap = .74f * .02f;
+        private void Rearrange()
+        {
+            float before = Height;
+            Arrange();
+            float next = Height; Height = before; page.ResizeRow(this, next);
+        }
         private void Arrange()
         {
+            float width = Mathf.Max(300, page.Right.Viewport.rect.width - 32);
             if (custom != null)
             {
-                Height = customHeight;
-                Place("Name", .01f, .99f, 4, 36);
+                float titleHeight = Mathf.Max(36, NameHeight(.98f * width) + 4);
+                Height = customHeight + titleHeight - 36;
+                Place("Name", .01f, .99f, 4, titleHeight);
                 RectTransform content = Root.Find("CustomEditor") as RectTransform;
                 content.anchorMin = new Vector2(.02f, 0); content.anchorMax = new Vector2(.99f, 1);
                 float before = Height;
                 ArrangeActions(10, before, 0);
-                content.offsetMin = new Vector2(3, 8 + Height - before); content.offsetMax = new Vector2(-3, -46); return;
+                content.offsetMin = new Vector2(3, 8 + Height - before); content.offsetMax = new Vector2(-3, -titleHeight - 10); return;
             }
-            float width = Mathf.Max(300, page.Right.Viewport.rect.width - 32);
-            T17Text label = Root.Find("Name").GetComponentInChildren<T17Text>(true);
-            float name = NameShare((label.preferredWidth + 16) / width);
+            float name = NameShare((nameLabel.preferredWidth + 16) / width);
             float start = name + .02f;
             float gap = ActionGap, button = ActionUnit;
             float end = Root.Find("Default") == null ? 1 : 1 - button - gap;
@@ -28,10 +34,7 @@ namespace OC2ModSettings
             if (inline > 0 && end - button - gap - start < 160 / width) inline = 0;
             if (inline > 0) end -= button + gap;
             Height = components.Count > 0 ? 88 : 68;
-            TextGenerationSettings settings = label.GetGenerationSettings(new Vector2(name * width - 16, 0));
-            settings.verticalOverflow = VerticalWrapMode.Overflow;
-            float nameHeight = label.cachedTextGeneratorForLayout.GetPreferredHeight(label.text, settings) / label.pixelsPerUnit;
-            Height = Mathf.Max(Height, Mathf.Ceil(nameHeight) + 12);
+            Height = Mathf.Max(Height, NameHeight(name * width) + 12);
             Place("Name", 0, name, 4, Height - 8);
             float top = (Height - 48) / 2;
             // Fixed actions share one unit; flexible fields consume the remaining action space.
@@ -76,8 +79,15 @@ namespace OC2ModSettings
             foreach (float share in new float[] { .24f, .32f, .40f }) if (needed <= share) return share;
             return .49f;
         }
+        private float NameHeight(float width)
+        {
+            TextGenerationSettings settings = nameLabel.GetGenerationSettings(new Vector2(width - 16, 0));
+            settings.verticalOverflow = VerticalWrapMode.Overflow;
+            return Mathf.Ceil(nameLabel.cachedTextGeneratorForLayout.GetPreferredHeight(nameLabel.text, settings) / nameLabel.pixelsPerUnit);
+        }
         private void AxisLabel(string name)
         {
+            if (Root.Find("Axis_" + name) != null) return;
             T17Text axis = NativeUi.Text(page.TextTemplate,
                 NativeUi.Rect(Root, "Axis_" + name, Vector2.zero, Vector2.one), "Label", name, 16);
             axis.color = Color.white; axis.alignment = TextAnchor.MiddleCenter;

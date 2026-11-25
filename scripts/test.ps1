@@ -8,7 +8,7 @@ $compiler='D:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current
 $sdkSources=Get-ChildItem -LiteralPath (Join-Path $root 'sdk') -Filter *.cs | ForEach-Object FullName
 & $compiler /nologo /target:library /langversion:3 /warnaserror "/out:$output\ModSettings.SdkConsumer.dll" "/reference:$GameRoot\BepInEx\core\BepInEx.dll" "/reference:$GameRoot\Overcooked2_Data\Managed\UnityEngine.dll" "/reference:$GameRoot\Overcooked2_Data\Managed\UnityEngine.CoreModule.dll" @sdkSources
 if($LASTEXITCODE -ne 0){throw 'SDK source-only consumer compilation failed'}
-$sources=@('tests\CoreTests.cs','tests\CoreCategoryOrder.cs','tests\CoreSdk.cs','tests\CoreLocalization.cs') | ForEach-Object {Join-Path $root $_}
+$sources=Get-ChildItem -LiteralPath (Join-Path $root 'tests') -Filter Core*.cs | ForEach-Object FullName
 # Exercise the built provider, and an independently compiled copy of the SDK tag type.
 & $compiler /nologo /target:exe /langversion:3 "/out:$output\OC2ModSettings.Tests.exe" "/reference:$root\bin\Release\OC2ModSettings.dll" "/reference:ConsumerSdk=$output\ModSettings.SdkConsumer.dll" "/reference:$GameRoot\BepInEx\core\BepInEx.dll" "/reference:$GameRoot\Overcooked2_Data\Managed\UnityEngine.dll" "/reference:$GameRoot\Overcooked2_Data\Managed\UnityEngine.CoreModule.dll" "/reference:$GameRoot\Overcooked2_Data\Managed\Assembly-CSharp.dll" @sources
 if($LASTEXITCODE -ne 0){throw 'Core test compilation failed'}

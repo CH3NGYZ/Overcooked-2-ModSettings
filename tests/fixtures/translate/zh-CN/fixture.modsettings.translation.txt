@@ -1,0 +1,8 @@
+mod=文件翻译模组
+group/Base category=文件分区
+config/Fixture/Number=文件数字
+config/Fixture/Number/description=文件数字说明
+action/run/title=文件动作标题
+action/run/label=文件运行
+action/run/description=文件动作说明
+action/inspect/label=文件详情
