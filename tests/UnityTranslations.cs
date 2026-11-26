@@ -64,7 +64,8 @@ public sealed partial class ModSettingsUnityTests
                 Transform tab = page.Left.Content.Find("Mod_" + owner);
                 Check(tab != null && Caption(tab) == "API Translation Fixture", "English registration overrides filename-backed MOD name");
                 Submit(tab, page); yield return null; yield return null; yield return null;
-                Transform group = page.Right.Content.Find("Category/Label");
+                T17Text groupLabel = page.Right.Content.Find("Category/Label").GetComponent<T17Text>();
+                Transform group = groupLabel.transform;
                 RectTransform row = page.Right.Content.Find("Setting_Fixture_Number") as RectTransform;
                 Transform rawRow = page.Right.Content.Find("Setting_Fixture_Raw");
                 RectTransform actionRow = page.Right.Content.Find("Setting_@Action_run") as RectTransform;
@@ -72,12 +73,16 @@ public sealed partial class ModSettingsUnityTests
                 T17Button inspect = row.Find("Action_inspect").GetComponent<T17Button>();
                 NativeTextInput input = row.Find("ExactValue").GetComponent<NativeTextInput>();
                 T17Text numberLabel = row.Find("Name/Text").GetComponent<T17Text>();
+                T17Text actionTitle = actionRow.Find("Name/Text").GetComponent<T17Text>();
                 T17Text actionLabel = run.GetComponentInChildren<T17Text>();
                 Transform explanation = page.transform.Find("SettingsBody/Explanation");
                 Check(Caption(group) == "File Group" && numberLabel.text == "File Number"
                     && Caption(actionRow.Find("Name")) == "File Action Title" && actionLabel.text == "API Run"
                     && Caption(inspect.transform) == "File Inspect" && Caption(rawRow.Find("Name")) == "Raw",
                     "base category, configuration label, separate action captions and raw fallback resolve independently");
+                ScreenCapture.CaptureScreenshot(Path.Combine(output, "mod-translation-en.png"));
+                yield return new WaitForEndOfFrame(); yield return null;
+                VerifySettingsTypography(page, groupLabel, numberLabel, actionTitle);
 
                 page.Right.Reveal(row); page.Domain.SetSelectedGameObject(input.gameObject); yield return null; yield return null;
                 page.KeyboardFeedback();
@@ -142,6 +147,7 @@ public sealed partial class ModSettingsUnityTests
                 });
                 ScreenCapture.CaptureScreenshot(Path.Combine(output, "mod-translation-zh-CN.png"));
                 yield return new WaitForEndOfFrame(); yield return null;
+                VerifySettingsTypography(page, groupLabel, numberLabel, actionTitle);
 
                 testLanguage = SupportedLanguages.French; yield return new WaitForSecondsRealtime(.4f); yield return null;
                 Check(Caption(tab) == "● API Translation Fixture" && Caption(group) == "File Group" && numberLabel.text == "File Number"

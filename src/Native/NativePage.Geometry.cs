@@ -44,9 +44,8 @@ namespace OC2ModSettings
             banner.pivot = new Vector2(.5f, 1); banner.anchoredPosition = new Vector2(0, -12);
             banner.sizeDelta = new Vector2(30, 150);
 
-            T17Text bodyText = ButtonTemplate.GetComponentInChildren<T17Text>(true) ?? TextTemplate;
             const float versionRightInset = 50, versionWidth = 102, titleInset = versionRightInset + versionWidth + 16;
-            T17Text version = NativeUi.Text(bodyText, banner, "PluginVersion", "v" + ModSettingsPlugin.Version, 28);
+            T17Text version = NativeUi.Text(BodyTextTemplate, banner, "PluginVersion", "v" + ModSettingsPlugin.Version, 28);
             RectTransform stamp = version.rectTransform;
             stamp.anchorMin = stamp.anchorMax = new Vector2(1, 0);
             stamp.offsetMin = new Vector2(-versionRightInset - versionWidth, 40);

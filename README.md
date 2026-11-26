@@ -1,10 +1,10 @@
-# 原生 MOD 设置 1.3.0
+# 原生 MOD 设置 1.3.1
 
 《胡闹厨房 2》Windows Steam / Unity Mono 的公共设置页面。入口位于主菜单 **厨师 → MOD 设置**，在“选择厨师”下方。GUID 为 `com.ch3ngyz.plugin.overcooked2.modsettings`。
 
 ## 安装与使用
 
-正式版本可从 [GitHub Release](https://github.com/CH3NGYZ/Overcooked-2-ModSettings/releases/latest) 下载。本文新增翻译功能需实际加载 1.3.0 或更新的实现。解压后将 `OC2ModSettings.dll` 放进游戏 `BepInEx/plugins`，重启游戏。需要 BepInEx 5 / HarmonyX；不需要 Configuration Manager、DIYLevel 或 FastInit。也可以用 `scripts/build.ps1` 自行构建，产物位于 `bin/Release/`，不会自动部署。标题条右侧显示实际加载的插件版本；点搜索框右边的「×」可清空搜索并继续输入。
+正式版本可从 [GitHub Release](https://github.com/CH3NGYZ/Overcooked-2-ModSettings/releases/latest) 下载。多语言翻译功能需实际加载 1.3.0 或更新的实现。解压后将 `OC2ModSettings.dll` 放进游戏 `BepInEx/plugins`，重启游戏。需要 BepInEx 5 / HarmonyX；不需要 Configuration Manager、DIYLevel 或 FastInit。也可以用 `scripts/build.ps1` 自行构建，产物位于 `bin/Release/`，不会自动部署。标题条右侧显示实际加载的插件版本；点搜索框右边的「×」可清空搜索并继续输入。
 
 默认按 **反引号／波浪号键（`KeyCode.BackQuote`）** 开关页面。与左栏对齐的快捷键按钮显示当前键；点一下，按字母、数字、标点、小键盘数字／运算键或 F 键等非保留单键，立即保存到 `Navigation.ToggleKey`。Ctrl、Alt、Shift、Windows／Command、锁定键、Tab、空格、导航／编辑／系统键和鼠标、手柄不参与录入；Esc 取消。录入完成后，再按一次新键才会开关。按住 Ctrl、Alt 或 Windows／Command 时不触发全局开关。在本页输入框里，绑定的普通字符键仍可正常输入；默认反引号和 F 键保留直接关闭页面的行为。
 

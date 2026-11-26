@@ -210,7 +210,7 @@ namespace OC2ModSettings
                         RectTransform header = NativeUi.Rect(Right.Content, "Category", Vector2.zero, Vector2.one);
                         NativeUi.Box(header, 4, y, width - 8, 40);
                         NativeUi.Backer(header, Palette.Category).raycastTarget = false;
-                        T17Text label = NativeUi.Text(TextTemplate, header, "Label", row.DisplayCategory, 24);
+                        T17Text label = NativeUi.Text(BodyTextTemplate, header, "Label", row.DisplayCategory, 24);
                         categoryLabels.Add(label, row);
                         label.alignment = TextAnchor.MiddleCenter; label.color = Color.white;
                         label.resizeTextForBestFit = true; label.resizeTextMinSize = 18; label.resizeTextMaxSize = 24;

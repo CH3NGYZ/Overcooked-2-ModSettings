@@ -31,7 +31,7 @@ namespace OC2ModSettings
             editor.Root = NativeUi.Rect(page.Right.Content, "Setting_" + row.Identity.Replace('\n', '_'), Vector2.zero, Vector2.one);
             NativeUi.Backer(editor.Root, new Color(1, 1, 1, .08f)).raycastTarget = false;
             RectTransform name = NativeUi.Rect(editor.Root, "Name", new Vector2(.01f, .08f), new Vector2(.32f, .92f));
-            editor.nameLabel = NativeUi.Text(page.TextTemplate, name, "Text", row.DisplayName, 22);
+            editor.nameLabel = NativeUi.Text(page.BodyTextTemplate, name, "Text", row.DisplayName, 22);
             editor.nameLabel.color = Color.white;
             editor.Root.gameObject.AddComponent<SettingsRowFeedback>().Initialize(page, row);
             if (row.Entry != null)

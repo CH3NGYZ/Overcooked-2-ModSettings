@@ -11,7 +11,7 @@ namespace OC2ModSettings
     {
         internal ConfigCatalog Catalog;
         internal T17Button ButtonTemplate;
-        internal T17Text TextTemplate;
+        internal T17Text TextTemplate, BodyTextTemplate;
         internal T17Scrollbar ScrollbarTemplate;
         internal ScrollColumn Left, Right;
         internal NativeOverlay Overlay;
@@ -58,6 +58,7 @@ namespace OC2ModSettings
                 NativePage page = go.AddComponent<NativePage>();
                 page.host = host; page.m_CachedEventSystem = host.Domain; page.cachedUser = host.Domain.AssignedGamepadUser;
                 page.Catalog = catalog; page.ButtonTemplate = sourceButton; page.TextTemplate = sourceText; page.Shortcut = shortcut;
+                page.BodyTextTemplate = sourceButton.GetComponentInChildren<T17Text>(true) ?? sourceText;
                 page.Palette = NativePageTemplate.Palette;
                 page.RefreshInputBindings();
                 page.pinned = ModSettingsPlugin.Instance.Pins;
